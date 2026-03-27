@@ -37,7 +37,8 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
 
     const clerkId = req.auth.userId;
 
-    // 2. Fetch the internal user from our database using the Clerk ID
+    // 2. Fetch the internal user from our database using the Clerk ID.
+    // clerkId is nullable (guests have no clerkId), so we query via the clerkId field.
     const user = await prisma.user.findUnique({
       where: { clerkId },
       select: {
@@ -45,6 +46,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
         email: true,
         role: true,
         clerkId: true,
+        isGuest: true,
       },
     });
 
@@ -55,8 +57,13 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     }
 
     // 3. Attach the internal user to the request
-    req.user = user;
-    
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      clerkId: user.clerkId ?? clerkId,
+    };
+
     next();
   } catch (error) {
     next(error);
@@ -86,7 +93,12 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
     });
 
     if (user) {
-      req.user = user;
+      req.user = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        clerkId: user.clerkId ?? clerkId,
+      };
     }
 
     next();
