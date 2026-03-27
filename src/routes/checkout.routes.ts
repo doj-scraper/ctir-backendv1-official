@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { HttpError } from '../lib/auth.js';
 import { verifyWebhookSignature } from '../lib/stripe.js';
 import { requireAuth } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
 import { CheckoutService } from '../services/checkout.service.js';
 
@@ -90,7 +91,7 @@ async function handleWebhook(req: Request, res: Response, next: NextFunction) {
 }
 
 // Stripe signature verification must use the raw request body provided by app-level express.raw().
-router.post('/webhook', handleWebhook);
+router.post('/webhook', rateLimit({ windowMs: 60_000, maxRequests: 100, keyPrefix: 'checkout-webhook' }), handleWebhook);
 
 router.use(requireAuth);
 

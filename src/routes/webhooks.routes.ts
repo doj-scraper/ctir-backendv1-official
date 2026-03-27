@@ -2,11 +2,12 @@ import express from 'express';
 import { Webhook } from 'svix';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 import { logEvent } from '../services/event-logger.service.js';
 
 const router = express.Router();
 
-router.post('/clerk', async (req, res) => {
+router.post('/clerk', rateLimit({ windowMs: 60_000, maxRequests: 100, keyPrefix: 'clerk-webhook' }), async (req, res) => {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!SIGNING_SECRET) {

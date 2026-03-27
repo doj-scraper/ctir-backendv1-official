@@ -25,7 +25,13 @@ async function createRedisClient(): Promise<RedisLike | null> {
     return null;
   }
 
-  const isUpstash = env.REDIS_URL.includes('upstash.io');
+  const isUpstash = (() => {
+    try {
+      return new URL(env.REDIS_URL).hostname.endsWith('.upstash.io');
+    } catch {
+      return false;
+    }
+  })();
 
   if (isUpstash) {
     const { Redis } = await import('@upstash/redis');
