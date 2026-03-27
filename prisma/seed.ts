@@ -2,372 +2,502 @@ import { PrismaClient, QualityGrade } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// ---------------------------------------------------------------------------
+// Seed data types
+// ---------------------------------------------------------------------------
+
 type VariantSeed = {
-  modelNumber: string;
   marketingName: string;
-  colorway?: string;
-  storage?: string;
+  modelNumber?: string;
 };
 
 type HierarchySeed = {
   brand: string;
-  modelType: string;
-  generation: string;
-  releaseYear?: number;
-  variants: VariantSeed[];
+  models: {
+    name: string;
+    generations: {
+      name: string;
+      releaseYear?: number;
+      variants: VariantSeed[];
+    }[];
+  }[];
 };
 
 type InventorySeed = {
-  skuId: string;
+  skuId: string;          // Smart SKU format: [Bucket]-[Subcategory]-[Grade]-[Device]
+  partName: string;       // Strictly required
   category: string;
-  variantModelNumber?: string;
-  partName?: string;
-  qualityGrade?: QualityGrade;
-  wholesalePrice?: number;
-  stockLevel?: number;
-  specificationString?: string;
-  compatibleModelNumbers?: string[];
+  brand: string;
+  model: string;
+  generation: string;
+  variantMarketingName: string;
+  wholesalePrice: number; // Cents. 0 = "Contact for Price"
+  stockLevel: number;
+  qualityGrade: QualityGrade;
+  specifications?: Record<string, string>;
+  // Additional variants this SKU is compatible with (cross-compatibility)
+  compatibleVariants?: Array<{
+    brand: string;
+    model: string;
+    generation: string;
+    variantMarketingName: string;
+  }>;
 };
+
+// ---------------------------------------------------------------------------
+// Hierarchy seed data — 4-level tree: Brand → ModelType → Generation → Variant
+// ---------------------------------------------------------------------------
 
 const hierarchySeed: HierarchySeed[] = [
   {
     brand: "Apple",
-    modelType: "iPhone",
-    generation: "17 Pro Max",
-    releaseYear: 2025,
-    variants: [{ modelNumber: "A3257", marketingName: "iPhone 17 Pro Max" }],
-  },
-  {
-    brand: "Apple",
-    modelType: "iPhone",
-    generation: "17 Pro",
-    releaseYear: 2025,
-    variants: [{ modelNumber: "A3256", marketingName: "iPhone 17 Pro" }],
-  },
-  {
-    brand: "Apple",
-    modelType: "iPhone",
-    generation: "17",
-    releaseYear: 2025,
-    variants: [{ modelNumber: "A3258", marketingName: "iPhone 17" }],
-  },
-  {
-    brand: "Apple",
-    modelType: "iPhone",
-    generation: "16 Pro Max",
-    releaseYear: 2024,
-    variants: [{ modelNumber: "A3084", marketingName: "iPhone 16 Pro Max" }],
-  },
-  {
-    brand: "Apple",
-    modelType: "iPhone",
-    generation: "13",
-    releaseYear: 2021,
-    variants: [{ modelNumber: "A2482", marketingName: "iPhone 13" }],
-  },
-  {
-    brand: "Apple",
-    modelType: "iPhone",
-    generation: "14",
-    releaseYear: 2022,
-    variants: [{ modelNumber: "A2649", marketingName: "iPhone 14" }],
-  },
-  {
-    brand: "Samsung",
-    modelType: "Galaxy S",
-    generation: "S25 Ultra",
-    releaseYear: 2025,
-    variants: [{ modelNumber: "SM-S928", marketingName: "Galaxy S25 Ultra" }],
+    models: [
+      {
+        name: "iPhone",
+        generations: [
+          {
+            name: "iPhone 13",
+            releaseYear: 2021,
+            variants: [
+              { marketingName: "iPhone 13", modelNumber: "A2482" },
+              { marketingName: "iPhone 13 Mini", modelNumber: "A2481" },
+              { marketingName: "iPhone 13 Pro", modelNumber: "A2483" },
+              { marketingName: "iPhone 13 Pro Max", modelNumber: "A2484" },
+            ],
+          },
+          {
+            name: "iPhone 14",
+            releaseYear: 2022,
+            variants: [
+              { marketingName: "iPhone 14", modelNumber: "A2649" },
+              { marketingName: "iPhone 14 Plus", modelNumber: "A2632" },
+              { marketingName: "iPhone 14 Pro", modelNumber: "A2650" },
+              { marketingName: "iPhone 14 Pro Max", modelNumber: "A2651" },
+            ],
+          },
+          {
+            name: "iPhone 15",
+            releaseYear: 2023,
+            variants: [
+              { marketingName: "iPhone 15", modelNumber: "A3089" },
+              { marketingName: "iPhone 15 Plus", modelNumber: "A3090" },
+              { marketingName: "iPhone 15 Pro", modelNumber: "A3101" },
+              { marketingName: "iPhone 15 Pro Max", modelNumber: "A3105" },
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     brand: "Samsung",
-    modelType: "Galaxy S",
-    generation: "S25",
-    releaseYear: 2025,
-    variants: [{ modelNumber: "SM-S921", marketingName: "Galaxy S25" }],
-  },
-  {
-    brand: "Samsung",
-    modelType: "Galaxy Z",
-    generation: "Fold 6",
-    releaseYear: 2024,
-    variants: [{ modelNumber: "SM-F956", marketingName: "Galaxy Z Fold 6" }],
+    models: [
+      {
+        name: "Galaxy S",
+        generations: [
+          {
+            name: "Galaxy S21",
+            releaseYear: 2021,
+            variants: [
+              { marketingName: "Galaxy S21", modelNumber: "SM-G991B" },
+              { marketingName: "Galaxy S21+", modelNumber: "SM-G996B" },
+              { marketingName: "Galaxy S21 Ultra", modelNumber: "SM-G998B" },
+            ],
+          },
+          {
+            name: "Galaxy S22",
+            releaseYear: 2022,
+            variants: [
+              { marketingName: "Galaxy S22", modelNumber: "SM-S901B" },
+              { marketingName: "Galaxy S22+", modelNumber: "SM-S906B" },
+              { marketingName: "Galaxy S22 Ultra", modelNumber: "SM-S908B" },
+            ],
+          },
+          {
+            name: "Galaxy S24",
+            releaseYear: 2024,
+            variants: [
+              { marketingName: "Galaxy S24", modelNumber: "SM-S921B" },
+              { marketingName: "Galaxy S24+", modelNumber: "SM-S926B" },
+              { marketingName: "Galaxy S24 Ultra", modelNumber: "SM-S928B" },
+            ],
+          },
+        ],
+      },
+    ],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Inventory seed data — Smart SKU format: [Bucket]-[Subcategory]-[Grade]-[Device]
+// Prices in cents. wholesalePrice = 0 means "Contact for Price".
+// ---------------------------------------------------------------------------
 
 const inventorySeed: InventorySeed[] = [
+  // Batteries — Bucket 3, Subcategory B (Battery), Grade O (OEM)
   {
-    skuId: "IF17PrM-3-MOD-BAT",
-    category: "Battery",
-    variantModelNumber: "A3257",
-    partName: "Replacement Battery",
-    qualityGrade: QualityGrade.Premium,
-    wholesalePrice: 2500,
+    skuId: "3-B-O-IP13",
+    partName: "iPhone 13 OEM Battery",
+    category: "Batteries",
+    brand: "Apple",
+    model: "iPhone",
+    generation: "iPhone 13",
+    variantMarketingName: "iPhone 13",
+    wholesalePrice: 2999, // $29.99
     stockLevel: 150,
-    specificationString: "Type: Lithium-Ion, Adhesive|Capacity: Not specified|Playback: 37 hours",
-  },
-  {
-    skuId: "IF17PrM-3-MOD-CHG",
-    category: "Charging Port",
-    variantModelNumber: "A3257",
-    partName: "Charge Port Assembly",
     qualityGrade: QualityGrade.OEM,
-    wholesalePrice: 1800,
-    stockLevel: 200,
-    specificationString: "Type: USB-C|Specs: USB 3.0",
+    specifications: {
+      Capacity: "3227 mAh",
+      Voltage: "3.85V",
+      Type: "Li-Ion",
+    },
   },
   {
-    skuId: "IF17PrM-3-MOD-CAM",
-    category: "Camera",
-    variantModelNumber: "A3257",
-    partName: "Camera Array",
-    qualityGrade: QualityGrade.OEM,
-    wholesalePrice: 9500,
-    stockLevel: 75,
-    specificationString: "Rear: 48MP Fusion Main + 48MP Ultra Wide + 48MP Telephoto|Front: 18MP",
-  },
-  {
-    skuId: "IF16PrM-3-MOD-BAT",
-    category: "Battery",
-    variantModelNumber: "A3084",
-    partName: "Replacement Battery",
+    skuId: "3-B-P-IP13",
+    partName: "iPhone 13 Premium Battery",
+    category: "Batteries",
+    brand: "Apple",
+    model: "iPhone",
+    generation: "iPhone 13",
+    variantMarketingName: "iPhone 13",
+    wholesalePrice: 1999, // $19.99
+    stockLevel: 80,
     qualityGrade: QualityGrade.Premium,
-    wholesalePrice: 2200,
+    specifications: {
+      Capacity: "3227 mAh",
+      Voltage: "3.85V",
+      Type: "Li-Ion",
+    },
+  },
+  {
+    skuId: "3-B-O-IP14",
+    partName: "iPhone 14 OEM Battery",
+    category: "Batteries",
+    brand: "Apple",
+    model: "iPhone",
+    generation: "iPhone 14",
+    variantMarketingName: "iPhone 14",
+    wholesalePrice: 3499, // $34.99
     stockLevel: 120,
-    specificationString: "Type: Lithium-Ion, Adhesive|Capacity: 4685 mAh|Playback: 33 hours",
+    qualityGrade: QualityGrade.OEM,
+    specifications: {
+      Capacity: "3279 mAh",
+      Voltage: "3.87V",
+      Type: "Li-Ion",
+    },
+  },
+  // Screens — Bucket 1, Subcategory S (Screen), Grade O (OEM)
+  {
+    skuId: "1-S-O-IP14P",
+    partName: "iPhone 14 Pro OLED Display Assembly",
+    category: "Screens",
+    brand: "Apple",
+    model: "iPhone",
+    generation: "iPhone 14",
+    variantMarketingName: "iPhone 14 Pro",
+    wholesalePrice: 18999, // $189.99
+    stockLevel: 40,
+    qualityGrade: QualityGrade.OEM,
+    specifications: {
+      Resolution: "2556x1179",
+      Type: "OLED",
+      Brightness: "2000 nits",
+      Size: "6.12 inch",
+    },
+    // Cross-compatible with iPhone 14 Pro Max (same display tech, different size handled by SKU)
   },
   {
-    skuId: "IF13-14-1-DIS-OLED",
-    category: "Display",
-    partName: "OLED Display Assembly",
+    skuId: "1-S-O-IP15",
+    partName: "iPhone 15 OLED Display Assembly",
+    category: "Screens",
+    brand: "Apple",
+    model: "iPhone",
+    generation: "iPhone 15",
+    variantMarketingName: "iPhone 15",
+    wholesalePrice: 15999, // $159.99
+    stockLevel: 35,
+    qualityGrade: QualityGrade.OEM,
+    specifications: {
+      Resolution: "2556x1179",
+      Type: "OLED",
+      Brightness: "2000 nits",
+      Size: "6.12 inch",
+    },
+  },
+  // Samsung Batteries
+  {
+    skuId: "3-B-O-SGS22",
+    partName: "Galaxy S22 OEM Battery",
+    category: "Batteries",
+    brand: "Samsung",
+    model: "Galaxy S",
+    generation: "Galaxy S22",
+    variantMarketingName: "Galaxy S22",
+    wholesalePrice: 2499, // $24.99
+    stockLevel: 90,
+    qualityGrade: QualityGrade.OEM,
+    specifications: {
+      Capacity: "3700 mAh",
+      Voltage: "3.86V",
+      Type: "Li-Ion",
+    },
+  },
+  {
+    skuId: "3-B-A-SGS21",
+    partName: "Galaxy S21 Aftermarket Battery",
+    category: "Batteries",
+    brand: "Samsung",
+    model: "Galaxy S",
+    generation: "Galaxy S21",
+    variantMarketingName: "Galaxy S21",
+    wholesalePrice: 1499, // $14.99
+    stockLevel: 200,
     qualityGrade: QualityGrade.Aftermarket,
-    wholesalePrice: 4500,
+    specifications: {
+      Capacity: "4000 mAh",
+      Voltage: "3.86V",
+      Type: "Li-Ion",
+    },
+  },
+  // Samsung Screens
+  {
+    skuId: "1-S-O-SGS24U",
+    partName: "Galaxy S24 Ultra AMOLED Display Assembly",
+    category: "Screens",
+    brand: "Samsung",
+    model: "Galaxy S",
+    generation: "Galaxy S24",
+    variantMarketingName: "Galaxy S24 Ultra",
+    wholesalePrice: 0, // Contact for Price
+    stockLevel: 10,
+    qualityGrade: QualityGrade.OEM,
+    specifications: {
+      Resolution: "3088x1440",
+      Type: "AMOLED",
+      Brightness: "2600 nits",
+      Size: "6.8 inch",
+    },
+  },
+  // Charging Ports
+  {
+    skuId: "2-C-O-IP13",
+    partName: "iPhone 13 Lightning Charging Port",
+    category: "Charging Ports",
+    brand: "Apple",
+    model: "iPhone",
+    generation: "iPhone 13",
+    variantMarketingName: "iPhone 13",
+    wholesalePrice: 899, // $8.99
     stockLevel: 300,
-    specificationString: "Size: 6.1\"|Type: Super Retina XDR OLED|Refresh Rate: 60Hz|Compatibility: Cross-Compatible",
-    compatibleModelNumbers: ["A2482", "A2649"],
-  },
-  {
-    skuId: "SGP25U-3-MOD-BAT",
-    category: "Battery",
-    variantModelNumber: "SM-S928",
-    partName: "Replacement Battery",
-    qualityGrade: QualityGrade.Premium,
-    wholesalePrice: 2200,
-    stockLevel: 180,
-    specificationString: "Type: Lithium-Ion|Capacity: 5000 mAh|Fast Charging: 45W",
-  },
-  {
-    skuId: "SZF6-3-MOD-BAT",
-    category: "Battery",
-    variantModelNumber: "SM-F956",
-    partName: "Replacement Battery",
-    qualityGrade: QualityGrade.Premium,
-    wholesalePrice: 2800,
-    stockLevel: 60,
-    specificationString: "Type: Lithium-Ion (Dual Cell)|Capacity: 4400 mAh|Fast Charging: 25W",
+    qualityGrade: QualityGrade.OEM,
+    specifications: {
+      Connector: "Lightning",
+      Type: "Flex Cable Assembly",
+    },
+    // Compatible with all iPhone 13 variants
+    compatibleVariants: [
+      { brand: "Apple", model: "iPhone", generation: "iPhone 13", variantMarketingName: "iPhone 13 Mini" },
+      { brand: "Apple", model: "iPhone", generation: "iPhone 13", variantMarketingName: "iPhone 13 Pro" },
+      { brand: "Apple", model: "iPhone", generation: "iPhone 13", variantMarketingName: "iPhone 13 Pro Max" },
+    ],
   },
 ];
 
-function derivePartNameFromSku(skuId: string, fallbackCategory: string): string {
-  const normalized = skuId.toUpperCase();
+// ---------------------------------------------------------------------------
+// Helper: Find a Variant by brand/model/generation/marketingName
+// ---------------------------------------------------------------------------
 
-  if (normalized.endsWith("-BAT")) return "Replacement Battery";
-  if (normalized.endsWith("-CHG")) return "Charge Port Assembly";
-  if (normalized.endsWith("-CAM")) return "Camera Array";
-  if (normalized.includes("-DIS-")) return "Display Assembly";
-
-  return fallbackCategory + " Part";
+async function findVariantOrThrow(
+  brand: string,
+  model: string,
+  generation: string,
+  variantMarketingName: string
+) {
+  return prisma.variant.findFirstOrThrow({
+    where: {
+      marketingName: variantMarketingName,
+      generation: {
+        name: generation,
+        modelType: {
+          name: model,
+          brand: { name: brand },
+        },
+      },
+    },
+  });
 }
 
-function parseLegacySpecificationString(raw: string | undefined) {
-  if (!raw) {
-    return [] as Array<{ label: string; value: string; displayOrder: number }>;
-  }
-
-  return raw
-    .split("|")
-    .map((segment) => segment.trim())
-    .filter(Boolean)
-    .map((segment, index) => {
-      const separatorIndex = segment.indexOf(":");
-      if (separatorIndex === -1) {
-        return null;
-      }
-
-      const label = segment.slice(0, separatorIndex).trim();
-      const value = segment.slice(separatorIndex + 1).trim();
-      if (!label || !value) {
-        return null;
-      }
-
-      return { label, value, displayOrder: index };
-    })
-    .filter((value): value is { label: string; value: string; displayOrder: number } => Boolean(value));
-}
+// ---------------------------------------------------------------------------
+// Seed functions
+// ---------------------------------------------------------------------------
 
 async function upsertHierarchy() {
-  const variantIds = new Map<string, number>();
-
-  for (const entry of hierarchySeed) {
+  for (const brandSeed of hierarchySeed) {
     const brand = await prisma.brand.upsert({
-      where: { name: entry.brand },
+      where: { name: brandSeed.brand },
       update: {},
-      create: { name: entry.brand },
+      create: { name: brandSeed.brand },
     });
 
-    const modelType = await prisma.modelType.upsert({
-      where: { brandId_name: { brandId: brand.id, name: entry.modelType } },
-      update: {},
-      create: { brandId: brand.id, name: entry.modelType },
-    });
-
-    const generation = await prisma.generation.upsert({
-      where: { modelTypeId_name: { modelTypeId: modelType.id, name: entry.generation } },
-      update: { releaseYear: entry.releaseYear },
-      create: {
-        modelTypeId: modelType.id,
-        name: entry.generation,
-        releaseYear: entry.releaseYear,
-      },
-    });
-
-    for (const variant of entry.variants) {
-      const savedVariant = await prisma.variant.upsert({
-        where: { modelNumber: variant.modelNumber },
-        update: {
-          generationId: generation.id,
-          marketingName: variant.marketingName,
-          colorway: variant.colorway,
-          storage: variant.storage,
-        },
-        create: {
-          generationId: generation.id,
-          modelNumber: variant.modelNumber,
-          marketingName: variant.marketingName,
-          colorway: variant.colorway,
-          storage: variant.storage,
-        },
+    for (const modelSeed of brandSeed.models) {
+      const modelType = await prisma.modelType.upsert({
+        where: { brandId_name: { brandId: brand.id, name: modelSeed.name } },
+        update: {},
+        create: { name: modelSeed.name, brandId: brand.id },
       });
 
-      variantIds.set(savedVariant.modelNumber, savedVariant.id);
+      for (const generationSeed of modelSeed.generations) {
+        const generation = await prisma.generation.upsert({
+          where: { modelTypeId_name: { modelTypeId: modelType.id, name: generationSeed.name } },
+          update: { releaseYear: generationSeed.releaseYear ?? null },
+          create: {
+            name: generationSeed.name,
+            modelTypeId: modelType.id,
+            releaseYear: generationSeed.releaseYear ?? null,
+          },
+        });
+
+        for (const variantSeed of generationSeed.variants) {
+          await prisma.variant.upsert({
+            where: {
+              generationId_marketingName: {
+                generationId: generation.id,
+                marketingName: variantSeed.marketingName,
+              },
+            },
+            update: { modelNumber: variantSeed.modelNumber ?? null },
+            create: {
+              marketingName: variantSeed.marketingName,
+              modelNumber: variantSeed.modelNumber ?? null,
+              generationId: generation.id,
+            },
+          });
+        }
+      }
     }
   }
-
-  return variantIds;
 }
 
-async function main() {
-  console.log("🌱 Starting Clerk-oriented Smart SKU seed...");
-
-  const categories = ["Battery", "Charging Port", "Camera", "Display"];
-  const categoryIds = new Map<string, number>();
-
-  for (const name of categories) {
-    const category = await prisma.category.upsert({
+async function upsertCategories() {
+  const categoryNames = ["Batteries", "Screens", "Charging Ports", "Cameras", "Speakers"];
+  for (const name of categoryNames) {
+    await prisma.category.upsert({
       where: { name },
       update: {},
       create: { name },
     });
-
-    categoryIds.set(name, category.id);
   }
+}
 
-  const variantIds = await upsertHierarchy();
+async function upsertInventory() {
+  for (const inv of inventorySeed) {
+    // Resolve the primary variant
+    const variant = await findVariantOrThrow(
+      inv.brand,
+      inv.model,
+      inv.generation,
+      inv.variantMarketingName
+    );
 
-  for (const item of inventorySeed) {
-    const categoryId = categoryIds.get(item.category);
-    if (!categoryId) {
-      throw new Error("Missing category for seed item " + item.skuId);
-    }
+    const category = await prisma.category.findUniqueOrThrow({
+      where: { name: inv.category },
+    });
 
-    const variantId = item.variantModelNumber
-      ? variantIds.get(item.variantModelNumber) ?? null
-      : null;
-
-    const partName = item.partName ?? derivePartNameFromSku(item.skuId, item.category);
-
+    // Upsert the inventory item (skuId is the PK)
     await prisma.inventory.upsert({
-      where: { skuId: item.skuId },
+      where: { skuId: inv.skuId },
       update: {
-        variantId,
-        categoryId,
-        partName,
-        qualityGrade: item.qualityGrade ?? QualityGrade.Aftermarket,
-        wholesalePrice: item.wholesalePrice ?? 0,
-        stockLevel: item.stockLevel ?? 0,
+        wholesalePrice: inv.wholesalePrice,
+        stockLevel: inv.stockLevel,
       },
       create: {
-        skuId: item.skuId,
-        variantId,
-        categoryId,
-        partName,
-        qualityGrade: item.qualityGrade ?? QualityGrade.Aftermarket,
-        wholesalePrice: item.wholesalePrice ?? 0,
-        stockLevel: item.stockLevel ?? 0,
+        skuId: inv.skuId,
+        partName: inv.partName,
+        categoryId: category.id,
+        wholesalePrice: inv.wholesalePrice,
+        qualityGrade: inv.qualityGrade,
+        stockLevel: inv.stockLevel,
       },
     });
 
-    for (const specification of parseLegacySpecificationString(item.specificationString)) {
-      await prisma.specification.upsert({
-        where: { skuId_label: { skuId: item.skuId, label: specification.label } },
-        update: {
-          value: specification.value,
-          displayOrder: specification.displayOrder,
-        },
-        create: {
-          skuId: item.skuId,
-          label: specification.label,
-          value: specification.value,
-          displayOrder: specification.displayOrder,
-        },
-      });
+    // Upsert specifications using skuId + label as unique key
+    if (inv.specifications) {
+      for (const [label, value] of Object.entries(inv.specifications)) {
+        await prisma.specification.upsert({
+          where: { skuId_label: { skuId: inv.skuId, label } },
+          update: { value },
+          create: { skuId: inv.skuId, label, value },
+        });
+      }
     }
 
-    for (const modelNumber of item.compatibleModelNumbers ?? []) {
-      const compatibleVariantId = variantIds.get(modelNumber);
-      if (!compatibleVariantId) {
-        throw new Error("Missing compatible variant " + modelNumber + " for " + item.skuId);
-      }
+    // Upsert the primary compatibility mapping
+    await prisma.compatibilityMap.upsert({
+      where: { skuId_variantId: { skuId: inv.skuId, variantId: variant.id } },
+      update: {},
+      create: { skuId: inv.skuId, variantId: variant.id },
+    });
 
-      await prisma.compatibilityMap.upsert({
-        where: { skuId_variantId: { skuId: item.skuId, variantId: compatibleVariantId } },
-        update: {},
-        create: { skuId: item.skuId, variantId: compatibleVariantId },
-      });
+    // Upsert additional compatible variant mappings
+    if (inv.compatibleVariants) {
+      for (const compat of inv.compatibleVariants) {
+        const compatVariant = await findVariantOrThrow(
+          compat.brand,
+          compat.model,
+          compat.generation,
+          compat.variantMarketingName
+        );
+
+        await prisma.compatibilityMap.upsert({
+          where: { skuId_variantId: { skuId: inv.skuId, variantId: compatVariant.id } },
+          update: {},
+          create: { skuId: inv.skuId, variantId: compatVariant.id },
+        });
+      }
     }
   }
+}
 
-  const [brandCount, modelTypeCount, generationCount, variantCount, categoryCount, inventoryCount, specificationCount, compatibilityCount] =
-    await prisma.$transaction([
-      prisma.brand.count(),
-      prisma.modelType.count(),
-      prisma.generation.count(),
-      prisma.variant.count(),
-      prisma.category.count(),
-      prisma.inventory.count(),
-      prisma.specification.count(),
-      prisma.compatibilityMap.count(),
-    ]);
+// ---------------------------------------------------------------------------
+// Initialize the SystemCounter for guest IDs
+// ---------------------------------------------------------------------------
 
-  console.log("✅ Seed complete");
-  console.log("📦 Smart SKU bucket format documented on Inventory.skuId comments (not enforced yet).");
-  console.log("📊 Summary:", {
-    brands: brandCount,
-    modelTypes: modelTypeCount,
-    generations: generationCount,
-    variants: variantCount,
-    categories: categoryCount,
-    inventory: inventoryCount,
-    specifications: specificationCount,
-    compatibilityMappings: compatibilityCount,
+async function upsertSystemCounter() {
+  await prisma.systemCounter.upsert({
+    where: { id: "guest_id" },
+    update: {},
+    create: { id: "guest_id", count: 0 },
   });
 }
 
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+async function main() {
+  console.log("🌱 Starting database seed...");
+
+  await upsertHierarchy();
+  console.log("✅ Device hierarchy seeded (Brand → ModelType → Generation → Variant)");
+
+  await upsertCategories();
+  console.log("✅ Categories seeded");
+
+  await upsertInventory();
+  console.log("✅ Inventory seeded (Smart SKUs with specifications and compatibility maps)");
+
+  await upsertSystemCounter();
+  console.log("✅ SystemCounter initialized for guest ID sequence");
+
+  console.log("🎉 Database seed completed successfully!");
+}
+
 main()
-  .catch((error) => {
-    console.error("❌ Seeding failed:", error);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
   });
