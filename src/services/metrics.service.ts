@@ -26,10 +26,10 @@ export class MetricsService {
       const health = await getDetailedHealth();
 
       const records = health.services.map((svc) => ({
-        serviceName: svc.name,
-        status: svc.status,
-        latencyMs: svc.latencyMs,
-        metadata: svc.message ? { message: svc.message } : undefined,
+        name: svc.name,
+        value: svc.latencyMs,
+        unit: 'ms',
+        metadata: svc.message ? JSON.stringify({ message: svc.message, status: svc.status }) : null,
       }));
 
       await prisma.metricSnapshot.createMany({ data: records });
@@ -55,10 +55,10 @@ export class MetricsService {
 
     return prisma.metricSnapshot.findMany({
       where: {
-        serviceName,
-        recordedAt: { gte: since },
+        name: serviceName,
+        createdAt: { gte: since },
       },
-      orderBy: { recordedAt: 'asc' },
+      orderBy: { createdAt: 'asc' },
     });
   }
 
@@ -70,10 +70,10 @@ export class MetricsService {
 
     const snapshots = await prisma.metricSnapshot.findMany({
       where: {
-        serviceName: 'API',
-        recordedAt: { gte: since },
+        name: 'API',
+        createdAt: { gte: since },
       },
-      orderBy: { latencyMs: 'asc' },
+      orderBy: { value: 'asc' },
     });
 
     const totalRequests = snapshots.length;
@@ -89,24 +89,28 @@ export class MetricsService {
       };
     }
 
-    const errorCount = snapshots.filter((s) => s.status === 'red').length;
+    // Extract status from metadata JSON
+    const errorCount = snapshots.filter((s) => {
+      const meta = s.metadata ? JSON.parse(s.metadata) : {};
+      return meta.status === 'red';
+    }).length;
     const errorRate = (errorCount / totalRequests) * 100;
 
-    const totalLatency = snapshots.reduce((sum, s) => sum + s.latencyMs, 0);
+    const totalLatency = snapshots.reduce((sum, s) => sum + s.value, 0);
     const avgLatencyMs = Math.round(totalLatency / totalRequests);
 
-    // p95: pick the value at the 95th percentile index (already sorted by latencyMs)
+    // p95: pick the value at the 95th percentile index (already sorted by value)
     const p95Index = Math.min(
       Math.ceil(totalRequests * 0.95) - 1,
       totalRequests - 1,
     );
-    const p95LatencyMs = snapshots[p95Index].latencyMs;
+    const p95LatencyMs = snapshots[p95Index].value;
 
     // Group by statusCode from metadata
     const statusBreakdown: Record<string, number> = {};
     for (const snap of snapshots) {
-      const meta = snap.metadata as Record<string, unknown> | null;
-      const code = meta?.statusCode != null ? String(meta.statusCode) : 'unknown';
+      const meta = snap.metadata ? JSON.parse(snap.metadata) : {};
+      const code = meta.statusCode != null ? String(meta.statusCode) : 'unknown';
       statusBreakdown[code] = (statusBreakdown[code] ?? 0) + 1;
     }
 
@@ -131,7 +135,7 @@ export class MetricsService {
         where: { createdAt: { lt: cutoff } },
       }),
       prisma.metricSnapshot.deleteMany({
-        where: { recordedAt: { lt: cutoff } },
+        where: { createdAt: { lt: cutoff } },
       }),
     ]);
 

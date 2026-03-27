@@ -19,6 +19,6 @@
     },
     "baseUrl": "."
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts", "api/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts", "api/**/*.ts"],
+  "exclude": ["node_modules", "dist", "prisma"]
 }

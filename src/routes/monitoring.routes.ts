@@ -47,10 +47,6 @@ router.get('/events', async (req: Request, res: Response) => {
       where.severity = sev;
     }
 
-    if (req.query.source) {
-      where.source = String(req.query.source);
-    }
-
     if (req.query.from || req.query.to) {
       where.createdAt = {};
       if (req.query.from) where.createdAt.gte = new Date(String(req.query.from));
@@ -200,14 +196,20 @@ router.post('/alerts/rules', async (req: Request, res: Response) => {
       return;
     }
 
-    const rule = await alertService.createRule({
-      name,
-      description,
+    // Build the condition JSON
+    const condition = JSON.stringify({
       metric,
       operator,
-      threshold: Number(threshold),
-      windowMinutes: windowMinutes != null ? Number(windowMinutes) : undefined,
-      cooldownMinutes: cooldownMinutes != null ? Number(cooldownMinutes) : undefined,
+      threshold,
+      windowMinutes: windowMinutes ?? 5,
+      cooldownMinutes: cooldownMinutes ?? 15,
+    });
+
+    const rule = await alertService.createRule({
+      name,
+      condition,
+      actionType: 'log',
+      actionPayload: JSON.stringify({ description: description ?? '' }),
     });
 
     res.status(201).json({ success: true, rule });

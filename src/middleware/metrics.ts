@@ -17,10 +17,10 @@ export function requestMetrics(req: Request, res: Response, next: NextFunction):
     // Fire-and-forget: store as API metric snapshot
     prisma.metricSnapshot.create({
       data: {
-        serviceName: 'API',
-        status: statusCode >= 500 ? 'red' : statusCode >= 400 ? 'yellow' : 'green',
-        latencyMs: duration,
-        metadata: { method, path, statusCode },
+        name: 'API',
+        value: duration,
+        unit: 'ms',
+        metadata: JSON.stringify({ method, path, statusCode }),
       }
     }).catch((err: unknown) => {
       logger.error({ err }, 'Failed to record request metric');

@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
-import type { EventCategory, EventSeverity, Prisma } from '@prisma/client';
+import type { EventCategory, EventSeverity } from '@prisma/client';
 
 // Fire-and-forget: logs event to DB without blocking the caller
 export function logEvent(
@@ -11,7 +11,12 @@ export function logEvent(
   metadata?: Record<string, unknown>
 ): void {
   prisma.systemEvent.create({
-    data: { category, severity, source, message, metadata: (metadata ?? undefined) as Prisma.InputJsonValue | undefined }
+    data: { 
+      category, 
+      severity, 
+      message, 
+      metadata: metadata ? JSON.stringify(metadata) : null 
+    }
   }).catch((err) => {
     logger.error({ err, category, severity, source }, 'Failed to log system event');
   });

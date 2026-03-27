@@ -40,11 +40,6 @@ const orderDetailSelect = {
               name: true,
             },
           },
-          variant: {
-            select: {
-              marketingName: true,
-            },
-          },
         },
       },
     },
@@ -135,7 +130,7 @@ function mapOrderLine(line: OrderDetailRecord['lines'][number]): OrderLineDetail
     partName: line.inventory.partName,
     category: line.inventory.category.name,
     qualityGrade: line.inventory.qualityGrade,
-    primaryModel: line.inventory.variant?.marketingName ?? undefined,
+    primaryModel: undefined,
     quantity: line.quantity,
     unitPriceCents: line.unitPriceAtPurchase,
     lineTotalCents: calculateLineTotalCents(line.quantity, line.unitPriceAtPurchase),

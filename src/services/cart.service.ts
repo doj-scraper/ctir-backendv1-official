@@ -16,11 +16,6 @@ const cartItemInclude = {
           name: true,
         },
       },
-      variant: {
-        select: {
-          marketingName: true,
-        },
-      },
     },
   },
 } satisfies Prisma.CartInclude;
@@ -102,7 +97,7 @@ function mapCartItem(item: CartRecord): CartItemDto {
     partName: item.inventory.partName,
     category: item.inventory.category.name,
     qualityGrade: item.inventory.qualityGrade,
-    primaryModel: item.inventory.variant?.marketingName ?? undefined,
+    primaryModel: undefined,
     quantity: item.quantity,
     addedAt: item.addedAt,
     unitPriceCents: item.inventory.wholesalePrice,
@@ -325,11 +320,6 @@ export class CartService {
             name: true,
           },
         },
-        variant: {
-          select: {
-            marketingName: true,
-          },
-        },
       },
     });
     const inventoryBySkuId = new Map(inventoryRows.map((row) => [row.skuId, row]));
@@ -348,7 +338,7 @@ export class CartService {
         partName: inventory.partName,
         category: inventory.category.name,
         qualityGrade: inventory.qualityGrade,
-        primaryModel: inventory.variant?.marketingName ?? undefined,
+        primaryModel: undefined,
         quantity: item.quantity,
         addedAt: new Date(),
         unitPriceCents: inventory.wholesalePrice,

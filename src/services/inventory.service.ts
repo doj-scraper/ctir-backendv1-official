@@ -4,13 +4,13 @@
 import { prisma } from '../lib/prisma.js';
 
 type BrandDto = {
-  id: number;
+  id: string;
   name: string;
 };
 
 type ModelDto = {
-  id: number;
-  brandId: number;
+  id: string;
+  brandId: string;
   modelNumber: string;
   marketingName: string;
   releaseYear: number;
@@ -41,18 +41,18 @@ export type StockCheckDto = {
 };
 
 type BrandRecord = {
-  id: number;
+  id: string;
   name: string;
 };
 
 type VariantRecord = {
-  id: number;
-  modelNumber: string;
+  id: string;
+  modelNumber: string | null;
   marketingName: string;
   generation: {
     releaseYear: number | null;
     modelType: {
-      brandId: number;
+      brandId: string;
       brand: BrandRecord;
     };
   };
@@ -67,7 +67,6 @@ type InventoryDetails = {
   category: {
     name: string;
   };
-  variant: VariantRecord | null;
   specifications: Array<{
     label: string;
     value: string;
@@ -93,7 +92,6 @@ const relationInclude = {
 
 const inventoryInclude = {
   category: true,
-  variant: relationInclude,
   specifications: {
     orderBy: {
       label: 'asc',
@@ -119,18 +117,19 @@ function mapModel(variant: VariantRecord): ModelDto {
   return {
     id: variant.id,
     brandId: variant.generation.modelType.brandId,
-    modelNumber: variant.modelNumber,
+    modelNumber: variant.modelNumber ?? '',
     marketingName: variant.marketingName,
     releaseYear: variant.generation.releaseYear ?? 0,
     brand: brand ? mapBrand(brand) : undefined,
   };
 }
 
-function mapCompatibilityModels(details: InventoryDetails, includePrimaryModel = false): ModelDto[] {
-  const models = new Map<number, ModelDto>();
+function mapCompatibilityModels(details: InventoryDetails): ModelDto[] {
+  const models = new Map<string, ModelDto>();
 
-  if (includePrimaryModel && details.variant) {
-    const primary = mapModel(details.variant);
+  // Get primary model from first compatibility
+  if (details.compatibilities.length > 0) {
+    const primary = mapModel(details.compatibilities[0].variant);
     models.set(primary.id, primary);
   }
 
@@ -156,6 +155,9 @@ function buildSpecificationString(
 
 function mapInventoryPart(details: InventoryDetails): InventoryPartDto {
   const compatibleModels = mapCompatibilityModels(details);
+  
+  // Get primary model from first compatibility
+  const primaryModel = details.compatibilities[0]?.variant.marketingName;
 
   return {
     skuId: details.skuId,
@@ -165,7 +167,7 @@ function mapInventoryPart(details: InventoryDetails): InventoryPartDto {
     quality: details.qualityGrade,
     price: details.wholesalePrice / 100,
     stock: details.stockLevel,
-    primaryModel: details.variant?.marketingName,
+    primaryModel,
     compatibleModels: compatibleModels.length > 0 ? compatibleModels : undefined,
   };
 }
@@ -184,37 +186,30 @@ export class InventoryService {
         skuId: 'asc',
       },
       include: inventoryInclude,
-    }) as InventoryDetails[];
+    });
 
     return inventory.map(mapInventoryPart);
   }
 
-  async getInventoryByModel(modelId: number): Promise<InventoryPartDto[]> {
+  async getInventoryByModel(variantId: string): Promise<InventoryPartDto[]> {
     const inventory = await prisma.inventory.findMany({
       where: {
-        OR: [
-          {
-            variantId: modelId,
+        compatibilities: {
+          some: {
+            variantId,
           },
-          {
-            compatibilities: {
-              some: {
-                variantId: modelId,
-              },
-            },
-          },
-        ],
+        },
       },
       orderBy: {
         skuId: 'asc',
       },
       include: inventoryInclude,
-    }) as InventoryDetails[];
+    });
 
     return inventory.map(mapInventoryPart);
   }
 
-  async getInventoryByVariant(variantId: number): Promise<InventoryPartDto[]> {
+  async getInventoryByVariant(variantId: string): Promise<InventoryPartDto[]> {
     return this.getInventoryByModel(variantId);
   }
 
@@ -235,7 +230,7 @@ export class InventoryService {
       return null;
     }
 
-    return mapCompatibilityModels(inventory, true);
+    return mapCompatibilityModels(inventory);
   }
 
   async getInventorySpecifications(skuId: string): Promise<InventorySpecificationDto[] | null> {
@@ -272,107 +267,22 @@ export class InventoryService {
   }
 
   async bulkCheckStock(skuIds: string[]): Promise<StockCheckDto[]> {
-    if (skuIds.length === 0) {
-      return [];
-    }
-
     const inventory = await prisma.inventory.findMany({
       where: {
-        skuId: {
-          in: skuIds,
-        },
+        skuId: { in: skuIds },
       },
       select: {
         skuId: true,
         stockLevel: true,
       },
-      orderBy: {
-        skuId: 'asc',
-      },
     });
 
-    return inventory.map((item: { skuId: string; stockLevel: number }) => ({
-      skuId: item.skuId,
-      stock: item.stockLevel,
-      available: item.stockLevel > 0,
+    const stockMap = new Map(inventory.map((i) => [i.skuId, i.stockLevel]));
+
+    return skuIds.map((skuId) => ({
+      skuId,
+      stock: stockMap.get(skuId) ?? 0,
+      available: (stockMap.get(skuId) ?? 0) > 0,
     }));
-  }
-
-  async reserveInventory(skuId: string, quantity: number): Promise<StockCheckDto | null> {
-    if (quantity <= 0) {
-      throw new Error('Reservation quantity must be greater than zero');
-    }
-
-    const inventory = await prisma.inventory.findUnique({
-      where: { skuId },
-      select: {
-        skuId: true,
-        stockLevel: true,
-      },
-    });
-
-    if (!inventory) {
-      return null;
-    }
-
-    if (inventory.stockLevel < quantity) {
-      throw new Error(`Insufficient stock for ${skuId}`);
-    }
-
-    const updated = await prisma.inventory.update({
-      where: { skuId },
-      data: {
-        stockLevel: {
-          decrement: quantity,
-        },
-      },
-      select: {
-        skuId: true,
-        stockLevel: true,
-      },
-    });
-
-    return {
-      skuId: updated.skuId,
-      stock: updated.stockLevel,
-      available: updated.stockLevel > 0,
-    };
-  }
-
-  async releaseInventory(skuId: string, quantity: number): Promise<StockCheckDto | null> {
-    if (quantity <= 0) {
-      throw new Error('Release quantity must be greater than zero');
-    }
-
-    const inventory = await prisma.inventory.findUnique({
-      where: { skuId },
-      select: {
-        skuId: true,
-        stockLevel: true,
-      },
-    });
-
-    if (!inventory) {
-      return null;
-    }
-
-    const updated = await prisma.inventory.update({
-      where: { skuId },
-      data: {
-        stockLevel: {
-          increment: quantity,
-        },
-      },
-      select: {
-        skuId: true,
-        stockLevel: true,
-      },
-    });
-
-    return {
-      skuId: updated.skuId,
-      stock: updated.stockLevel,
-      available: updated.stockLevel > 0,
-    };
   }
 }

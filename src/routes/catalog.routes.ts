@@ -7,18 +7,11 @@ const router = Router();
 const catalogService = new CatalogService();
 
 const modelsQuerySchema = z.object({
-  brandId: z.coerce
-    .number({ invalid_type_error: 'brandId must be a number' })
-    .int('brandId must be a whole number')
-    .positive('brandId must be a positive integer')
-    .optional(),
+  brandId: z.string().optional(),
 });
 
 const brandParamsSchema = z.object({
-  brandId: z.coerce
-    .number({ invalid_type_error: 'brandId must be a number' })
-    .int('brandId must be a whole number')
-    .positive('brandId must be a positive integer'),
+  brandId: z.string(),
 });
 
 const partsQuerySchema = z.object({
@@ -29,10 +22,7 @@ const partsQuerySchema = z.object({
 });
 
 const variantParamsSchema = z.object({
-  variantId: z.coerce
-    .number({ invalid_type_error: 'variantId must be a number' })
-    .int('variantId must be a whole number')
-    .positive('variantId must be a positive integer'),
+  variantId: z.string(),
 });
 
 type ModelsQuery = z.infer<typeof modelsQuerySchema>;

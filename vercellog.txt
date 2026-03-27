@@ -1,0 +1,152 @@
+06:07:54.721 Running build in Washington, D.C., USA (East) – iad1
+06:07:54.722 Build machine configuration: 2 cores, 8 GB
+06:07:54.840 Cloning github.com/doj-scraper/ctir-backendv1-official (Branch: feat/guest-identity-schema-alignment-docs, Commit: 46f09e7)
+06:07:55.066 Cloning completed: 225.000ms
+06:07:55.896 Restored build cache from previous deployment (6c31NTbSdSpbqqd18jAToawAejCt)
+06:07:56.163 Warning: Detected "engines": { "node": ">=18.0.0" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version
+06:07:56.164 Running "vercel build"
+06:07:56.800 Vercel CLI 50.37.1
+06:07:56.894 WARNING! Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings
+06:07:57.358 Warning: Detected "engines": { "node": ">=18.0.0" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version
+06:07:57.366 Installing dependencies...
+06:07:58.992 
+06:07:58.993 > celltech-backend@2.0.0 postinstall
+06:07:58.993 > prisma generate
+06:07:58.994 
+06:08:01.490 warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+06:08:01.491 For more information, see: https://pris.ly/prisma-config
+06:08:01.492 
+06:08:01.600 Prisma schema loaded from prisma/schema.prisma
+06:08:02.054 
+06:08:02.055 ✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 263ms
+06:08:02.055 
+06:08:02.055 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+06:08:02.056 
+06:08:02.056 Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+06:08:02.056 
+06:08:02.078 
+06:08:02.078 up to date in 4s
+06:08:02.079 
+06:08:02.079 46 packages are looking for funding
+06:08:02.079   run `npm fund` for details
+06:08:02.109 Running "npm run vercel-build"
+06:08:02.212 
+06:08:02.213 > celltech-backend@2.0.0 vercel-build
+06:08:02.213 > prisma generate && tsc
+06:08:02.213 
+06:08:02.918 warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+06:08:02.919 For more information, see: https://pris.ly/prisma-config
+06:08:02.920 
+06:08:02.968 Prisma schema loaded from prisma/schema.prisma
+06:08:03.381 ┌─────────────────────────────────────────────────────────┐
+06:08:03.382 │  Update available 6.19.2 -> 7.5.0                       │
+06:08:03.382 │                                                         │
+06:08:03.382 │  This is a major update - please follow the guide at    │
+06:08:03.382 │  https://pris.ly/d/major-version-upgrade                │
+06:08:03.383 │                                                         │
+06:08:03.383 │  Run the following to update                            │
+06:08:03.384 │    npm i --save-dev prisma@latest                       │
+06:08:03.384 │    npm i @prisma/client@latest                          │
+06:08:03.384 └─────────────────────────────────────────────────────────┘
+06:08:03.385 
+06:08:03.385 ✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 246ms
+06:08:03.385 
+06:08:03.385 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+06:08:03.385 
+06:08:03.386 Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+06:08:03.386 
+06:08:09.701 prisma/migrations/20260324_clerk_smart_sku_schema/backfill.ts(144,11): error TS2353: Object literal may only specify known properties, and 'displayOrder' does not exist in type '(Without<SpecificationUpdateInput, SpecificationUncheckedUpdateInput> & SpecificationUncheckedUpdateInput) | (Without<...> & SpecificationUpdateInput)'.
+06:08:09.702 prisma/migrations/20260324_clerk_smart_sku_schema/backfill.ts(150,11): error TS2353: Object literal may only specify known properties, and 'displayOrder' does not exist in type 'Without<SpecificationCreateInput, SpecificationUncheckedCreateInput> & SpecificationUncheckedCreateInput'.
+06:08:09.703 prisma/migrations/20260324_clerk_smart_sku_schema/backfill.ts(202,39): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+06:08:09.704 src/middleware/metrics.ts(23,9): error TS2322: Type '{ method: string; path: any; statusCode: number; }' is not assignable to type 'string'.
+06:08:09.704 src/routes/monitoring.routes.ts(51,13): error TS2339: Property 'source' does not exist on type 'SystemEventWhereInput'.
+06:08:09.704 src/services/alert.service.ts(44,16): error TS2353: Object literal may only specify known properties, and 'enabled' does not exist in type 'AlertRuleWhereInput'.
+06:08:09.704 src/services/alert.service.ts(53,16): error TS2339: Property 'lastFiredAt' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.705 src/services/alert.service.ts(55,16): error TS2339: Property 'lastFiredAt' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.705 src/services/alert.service.ts(55,45): error TS2339: Property 'cooldownMinutes' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.705 src/services/alert.service.ts(66,30): error TS2339: Property 'windowMinutes' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.709 src/services/alert.service.ts(70,18): error TS2353: Object literal may only specify known properties, and 'recordedAt' does not exist in type 'MetricSnapshotWhereInput'.
+06:08:09.709 src/services/alert.service.ts(71,20): error TS2353: Object literal may only specify known properties, and 'latencyMs' does not exist in type 'MetricSnapshotOrderByWithRelationInput | MetricSnapshotOrderByWithRelationInput[]'.
+06:08:09.709 src/services/alert.service.ts(79,53): error TS2339: Property 'metric' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.709 src/services/alert.service.ts(80,56): error TS2339: Property 'operator' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.709 src/services/alert.service.ts(80,71): error TS2339: Property 'threshold' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.710 src/services/alert.service.ts(84,41): error TS2339: Property 'metric' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.710 src/services/alert.service.ts(85,19): error TS2339: Property 'operator' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.710 src/services/alert.service.ts(85,36): error TS2339: Property 'threshold' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.710 src/services/alert.service.ts(93,15): error TS2353: Object literal may only specify known properties, and 'metadata' does not exist in type 'Without<AlertNotificationCreateInput, AlertNotificationUncheckedCreateInput> & AlertNotificationUncheckedCreateInput'.
+06:08:09.710 src/services/alert.service.ts(94,30): error TS2339: Property 'metric' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.710 src/services/alert.service.ts(96,32): error TS2339: Property 'operator' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.710 src/services/alert.service.ts(97,33): error TS2339: Property 'threshold' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.710 src/services/alert.service.ts(98,37): error TS2339: Property 'windowMinutes' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.711 src/services/alert.service.ts(105,21): error TS2353: Object literal may only specify known properties, and 'lastFiredAt' does not exist in type '(Without<AlertRuleUpdateInput, AlertRuleUncheckedUpdateInput> & AlertRuleUncheckedUpdateInput) | (Without<...> & AlertRuleUpdateInput)'.
+06:08:09.711 src/services/alert.service.ts(111,76): error TS2339: Property 'threshold' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; condition: string; actionType: string; actionPayload: string; isActive: boolean; evaluationIntervalMs: number; }'.
+06:08:09.711 src/services/alert.service.ts(124,50): error TS2322: Type 'CreateRuleInput' is not assignable to type '(Without<AlertRuleCreateInput, AlertRuleUncheckedCreateInput> & AlertRuleUncheckedCreateInput) | (Without<...> & AlertRuleCreateInput)'.
+06:08:09.712   Type 'CreateRuleInput' is not assignable to type 'Without<AlertRuleUncheckedCreateInput, AlertRuleCreateInput> & AlertRuleCreateInput'.
+06:08:09.712     Type 'CreateRuleInput' is missing the following properties from type 'AlertRuleCreateInput': condition, actionType, actionPayload
+06:08:09.712 src/services/alert.service.ts(159,18): error TS2353: Object literal may only specify known properties, and 'firedAt' does not exist in type 'AlertNotificationOrderByWithRelationInput | AlertNotificationOrderByWithRelationInput[]'.
+06:08:09.712 src/services/alert.service.ts(217,56): error TS2339: Property 'serviceName' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.713 src/services/alert.service.ts(219,55): error TS2339: Property 'status' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.713 src/services/alert.service.ts(225,28): error TS2339: Property 'serviceName' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.713 src/services/alert.service.ts(226,29): error TS2339: Property 'latencyMs' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.714 src/services/alert.service.ts(226,43): error TS2339: Property 'latencyMs' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.714 src/services/alert.service.ts(232,39): error TS2339: Property 'latencyMs' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.714 src/services/alert.service.ts(236,42): error TS2339: Property 'status' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.714 src/services/alert.service.ts(241,60): error TS2339: Property 'latencyMs' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.715 src/services/cart.service.ts(19,7): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'InventorySelect<DefaultArgs>'.
+06:08:09.715 src/services/cart.service.ts(105,43): error TS2339: Property 'marketingName' does not exist on type 'never'.
+06:08:09.715 src/services/cart.service.ts(328,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'InventoryInclude<DefaultArgs>'.
+06:08:09.715 src/services/cart.service.ts(349,29): error TS2551: Property 'category' does not exist on type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }'. Did you mean 'categoryId'?
+06:08:09.716 src/services/cart.service.ts(351,33): error TS2339: Property 'variant' does not exist on type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }'.
+06:08:09.722 src/services/catalog.service.ts(146,5): error TS2322: Type '{ name: string; id: string; }[]' is not assignable to type 'CatalogBrand[]'.
+06:08:09.723   Type '{ name: string; id: string; }' is not assignable to type 'CatalogBrand'.
+06:08:09.723     Types of property 'id' are incompatible.
+06:08:09.723       Type 'string' is not assignable to type 'number'.
+06:08:09.724 src/services/catalog.service.ts(156,22): error TS2352: Conversion of type '{ id: string; createdAt: Date; updatedAt: Date; generationId: string; modelNumber: string | null; marketingName: string; }[]' to type 'CatalogVariantRecord[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+06:08:09.724   Property 'generation' is missing in type '{ id: string; createdAt: Date; updatedAt: Date; generationId: string; modelNumber: string | null; marketingName: string; }' but required in type 'CatalogVariantRecord'.
+06:08:09.724 src/services/catalog.service.ts(157,7): error TS2322: Type '{ generation: { modelType: { brandId: number; }; }; } | undefined' is not assignable to type 'VariantWhereInput | undefined'.
+06:08:09.724   Types of property 'generation' are incompatible.
+06:08:09.725     Type '{ modelType: { brandId: number; }; }' is not assignable to type '(Without<GenerationScalarRelationFilter, GenerationWhereInput> & GenerationWhereInput) | (Without<...> & GenerationScalarRelationFilter) | undefined'.
+06:08:09.725       Types of property 'modelType' are incompatible.
+06:08:09.725         Type '{ brandId: number; }' is not assignable to type '(Without<ModelTypeScalarRelationFilter, ModelTypeWhereInput> & ModelTypeWhereInput) | (Without<...> & ModelTypeScalarRelationFilter) | undefined'.
+06:08:09.726           Types of property 'brandId' are incompatible.
+06:08:09.726             Type 'number' is not assignable to type 'string | StringFilter<"ModelType"> | undefined'.
+06:08:09.726 src/services/catalog.service.ts(184,20): error TS2352: Conversion of type '({ modelTypes: ({ generations: ({ variants: ({ generation: { modelType: { brand: { name: string; id: string; createdAt: Date; updatedAt: Date; }; } & { name: string; id: string; createdAt: Date; updatedAt: Date; brandId: string; }; } & { ...; }; } & { ...; })[]; } & { ...; })[]; } & { ...; })[]; } & { ...; })[]' to type 'CatalogHierarchyBrandRecord[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+06:08:09.728   Type '{ modelTypes: ({ generations: ({ variants: ({ generation: { modelType: { brand: { name: string; id: string; createdAt: Date; updatedAt: Date; }; } & { name: string; id: string; createdAt: Date; updatedAt: Date; brandId: string; }; } & { ...; }; } & { ...; })[]; } & { ...; })[]; } & { ...; })[]; } & { ...; }' is not comparable to type 'CatalogHierarchyBrandRecord'.
+06:08:09.728     Type '{ modelTypes: ({ generations: ({ variants: ({ generation: { modelType: { brand: { name: string; id: string; createdAt: Date; updatedAt: Date; }; } & { name: string; id: string; createdAt: Date; updatedAt: Date; brandId: string; }; } & { ...; }; } & { ...; })[]; } & { ...; })[]; } & { ...; })[]; } & { ...; }' is not comparable to type 'CatalogBrand'.
+06:08:09.728       Types of property 'id' are incompatible.
+06:08:09.728         Type 'string' is not comparable to type 'number'.
+06:08:09.729 src/services/catalog.service.ts(232,23): error TS2352: Conversion of type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }[]' to type 'CatalogInventoryRecord[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+06:08:09.729   Type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }' is missing the following properties from type 'CatalogInventoryRecord': category, variant, specifications, compatibilities
+06:08:09.729 src/services/catalog.service.ts(236,13): error TS2322: Type 'number' is not assignable to type 'string | StringFilter<"CompatibilityMap"> | undefined'.
+06:08:09.730 src/services/catalog.service.ts(242,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'InventoryInclude<DefaultArgs>'.
+06:08:09.730 src/services/catalog.service.ts(292,23): error TS2352: Conversion of type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }[]' to type 'CatalogInventoryRecord[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+06:08:09.730   Type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }' is missing the following properties from type 'CatalogInventoryRecord': category, variant, specifications, compatibilities
+06:08:09.730 src/services/catalog.service.ts(310,13): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'InventoryWhereInput'.
+06:08:09.731 src/services/catalog.service.ts(415,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'InventoryInclude<DefaultArgs>'.
+06:08:09.731 src/services/event-logger.service.ts(14,50): error TS2322: Type 'InputJsonValue | undefined' is not assignable to type 'string | null | undefined'.
+06:08:09.731   Type 'number' is not assignable to type 'string'.
+06:08:09.731 src/services/inventory.service.ts(182,23): error TS2352: Conversion of type '({ variant: never; category: { name: string; id: string; createdAt: Date; updatedAt: Date; }; specifications: { value: string; id: string; skuId: string; label: string; }[]; compatibilities: ({ ...; } & { ...; })[]; } & { ...; })[]' to type 'InventoryDetails[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+06:08:09.733   Type '{ variant: never; category: { name: string; id: string; createdAt: Date; updatedAt: Date; }; specifications: { value: string; id: string; skuId: string; label: string; }[]; compatibilities: ({ ...; } & { ...; })[]; } & { ...; }' is not comparable to type 'InventoryDetails'.
+06:08:09.733     Types of property 'compatibilities' are incompatible.
+06:08:09.733       Type '({ variant: { generation: { modelType: { brand: { name: string; id: string; createdAt: Date; updatedAt: Date; }; } & { name: string; id: string; createdAt: Date; updatedAt: Date; brandId: string; }; } & { ...; }; } & { ...; }; } & { ...; })[]' is not comparable to type '{ variant: VariantRecord; }[]'.
+06:08:09.734         Type '{ variant: { generation: { modelType: { brand: { name: string; id: string; createdAt: Date; updatedAt: Date; }; } & { name: string; id: string; createdAt: Date; updatedAt: Date; brandId: string; }; } & { ...; }; } & { ...; }; } & { ...; }' is not comparable to type '{ variant: VariantRecord; }'.
+06:08:09.734           The types of 'variant.id' are incompatible between these types.
+06:08:09.734             Type 'string' is not comparable to type 'number'.
+06:08:09.735 src/services/inventory.service.ts(193,23): error TS2352: Conversion of type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }[]' to type 'InventoryDetails[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+06:08:09.735   Type '{ createdAt: Date; updatedAt: Date; skuId: string; partName: string; categoryId: string; wholesalePrice: number; qualityGrade: QualityGrade; stockLevel: number; }' is missing the following properties from type 'InventoryDetails': category, variant, specifications, compatibilities
+06:08:09.735 src/services/inventory.service.ts(197,13): error TS2353: Object literal may only specify known properties, and 'variantId' does not exist in type 'InventoryWhereInput'.
+06:08:09.735 src/services/inventory.service.ts(202,17): error TS2322: Type 'number' is not assignable to type 'string | StringFilter<"CompatibilityMap"> | undefined'.
+06:08:09.736 src/services/metrics.service.ts(35,48): error TS2322: Type '{ serviceName: string; status: ServiceStatus; latencyMs: number; metadata: { message: string; } | undefined; }[]' is not assignable to type 'MetricSnapshotCreateManyInput | MetricSnapshotCreateManyInput[]'.
+06:08:09.736   Type '{ serviceName: string; status: ServiceStatus; latencyMs: number; metadata: { message: string; } | undefined; }[]' is not assignable to type 'MetricSnapshotCreateManyInput[]'.
+06:08:09.736     Type '{ serviceName: string; status: ServiceStatus; latencyMs: number; metadata: { message: string; } | undefined; }' is missing the following properties from type 'MetricSnapshotCreateManyInput': name, value, unit
+06:08:09.736 src/services/metrics.service.ts(58,9): error TS2353: Object literal may only specify known properties, and 'serviceName' does not exist in type 'MetricSnapshotWhereInput'.
+06:08:09.737 src/services/metrics.service.ts(61,18): error TS2353: Object literal may only specify known properties, and 'recordedAt' does not exist in type 'MetricSnapshotOrderByWithRelationInput | MetricSnapshotOrderByWithRelationInput[]'.
+06:08:09.737 src/services/metrics.service.ts(73,9): error TS2353: Object literal may only specify known properties, and 'serviceName' does not exist in type 'MetricSnapshotWhereInput'.
+06:08:09.737 src/services/metrics.service.ts(76,18): error TS2353: Object literal may only specify known properties, and 'latencyMs' does not exist in type 'MetricSnapshotOrderByWithRelationInput | MetricSnapshotOrderByWithRelationInput[]'.
+06:08:09.738 src/services/metrics.service.ts(92,50): error TS2339: Property 'status' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.738 src/services/metrics.service.ts(95,63): error TS2339: Property 'latencyMs' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.738 src/services/metrics.service.ts(103,46): error TS2339: Property 'latencyMs' does not exist on type '{ value: number; name: string; id: string; createdAt: Date; updatedAt: Date; metadata: string | null; unit: string; }'.
+06:08:09.738 src/services/metrics.service.ts(134,18): error TS2353: Object literal may only specify known properties, and 'recordedAt' does not exist in type 'MetricSnapshotWhereInput'.
+06:08:09.739 src/services/order.service.ts(43,11): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'InventorySelect<DefaultArgs>'.
+06:08:09.739 src/services/order.service.ts(138,43): error TS2339: Property 'marketingName' does not exist on type 'never'.
+06:08:09.757 Error: Command "npm run vercel-build" exited with 2

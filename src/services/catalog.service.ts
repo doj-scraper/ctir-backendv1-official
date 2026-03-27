@@ -1,13 +1,13 @@
 import { prisma } from '../lib/prisma.js';
 
 export interface CatalogBrand {
-  id: number;
+  id: string;
   name: string;
 }
 
 export interface CatalogModel {
-  id: number;
-  brandId: number;
+  id: string;
+  brandId: string;
   modelNumber: string;
   marketingName: string;
   releaseYear: number;
@@ -17,15 +17,15 @@ export interface CatalogModel {
 export interface CatalogHierarchyVariant extends CatalogModel {}
 
 export interface CatalogHierarchyGeneration {
-  id: number;
+  id: string;
   name: string;
   releaseYear: number | null;
   variants: CatalogHierarchyVariant[];
 }
 
 export interface CatalogHierarchyModelType {
-  id: number;
-  brandId: number;
+  id: string;
+  brandId: string;
   name: string;
   generations: CatalogHierarchyGeneration[];
 }
@@ -47,34 +47,28 @@ export interface CatalogPart {
 }
 
 type CatalogVariantRecord = {
-  id: number;
-  modelNumber: string;
+  id: string;
+  generationId: string;
+  modelNumber: string | null;
   marketingName: string;
   generation: {
+    id: string;
+    name: string;
     releaseYear: number | null;
     modelType: {
-      brandId: number;
-      brand: CatalogBrand;
+      id: string;
+      brandId: string;
+      name: string;
+      brand: {
+        id: string;
+        name: string;
+      };
     };
   };
 };
 
 type CatalogCompatibilityRecord = {
   variant: CatalogVariantRecord;
-};
-
-type CatalogHierarchyBrandRecord = CatalogBrand & {
-  modelTypes: Array<{
-    id: number;
-    brandId: number;
-    name: string;
-    generations: Array<{
-      id: number;
-      name: string;
-      releaseYear: number | null;
-      variants: CatalogVariantRecord[];
-    }>;
-  }>;
 };
 
 type CatalogInventoryRecord = {
@@ -86,7 +80,6 @@ type CatalogInventoryRecord = {
   category: {
     name: string;
   };
-  variant: CatalogVariantRecord | null;
   specifications: Array<{ label: string; value: string }>;
   compatibilities: CatalogCompatibilityRecord[];
 };
@@ -95,7 +88,7 @@ function mapVariantToModel(variant: CatalogVariantRecord): CatalogModel {
   return {
     id: variant.id,
     brandId: variant.generation.modelType.brandId,
-    modelNumber: variant.modelNumber,
+    modelNumber: variant.modelNumber ?? '',
     marketingName: variant.marketingName,
     releaseYear: variant.generation.releaseYear ?? 0,
     brand: variant.generation.modelType.brand,
@@ -116,7 +109,7 @@ function mapCompatibilityModels(
   compatibilities: CatalogCompatibilityRecord[]
 ): CatalogModel[] {
   const models = compatibilities.map(({ variant }) => mapVariantToModel(variant));
-  const uniqueById = new Map<number, CatalogModel>();
+  const uniqueById = new Map<string, CatalogModel>();
 
   for (const model of models) {
     uniqueById.set(model.id, model);
@@ -126,6 +119,9 @@ function mapCompatibilityModels(
 }
 
 function mapInventoryToPart(item: CatalogInventoryRecord): CatalogPart {
+  // Get primary model from first compatibility if available
+  const primaryModel = item.compatibilities[0]?.variant.marketingName;
+
   return {
     skuId: item.skuId,
     partName: item.partName,
@@ -134,7 +130,7 @@ function mapInventoryToPart(item: CatalogInventoryRecord): CatalogPart {
     price: item.wholesalePrice / 100,
     stock: item.stockLevel,
     quality: item.qualityGrade,
-    primaryModel: item.variant?.marketingName,
+    primaryModel,
     compatibleModels: item.compatibilities.length > 0
       ? mapCompatibilityModels(item.compatibilities)
       : undefined,
@@ -152,7 +148,7 @@ export class CatalogService {
     });
   }
 
-  async getModels(brandId?: number): Promise<CatalogModel[]> {
+  async getModels(brandId?: string): Promise<CatalogModel[]> {
     const variants = await prisma.variant.findMany({
       where: brandId
         ? {
@@ -175,7 +171,7 @@ export class CatalogService {
           },
         },
       },
-    }) as CatalogVariantRecord[];
+    });
 
     return variants.map(mapVariantToModel);
   }
@@ -209,7 +205,7 @@ export class CatalogService {
           },
         },
       },
-    }) as CatalogHierarchyBrandRecord[];
+    });
 
     return brands.map((brand) => ({
       id: brand.id,
@@ -228,7 +224,7 @@ export class CatalogService {
     }));
   }
 
-  async getPartsForVariant(variantId: number): Promise<CatalogPart[]> {
+  async getPartsForVariant(variantId: string): Promise<CatalogPart[]> {
     const inventory = await prisma.inventory.findMany({
       where: {
         compatibilities: {
@@ -239,19 +235,6 @@ export class CatalogService {
       },
       include: {
         category: true,
-        variant: {
-          include: {
-            generation: {
-              include: {
-                modelType: {
-                  include: {
-                    brand: true,
-                  },
-                },
-              },
-            },
-          },
-        },
         specifications: {
           orderBy: { label: 'asc' },
           select: {
@@ -281,7 +264,7 @@ export class CatalogService {
         { partName: 'asc' },
         { skuId: 'asc' },
       ],
-    }) as CatalogInventoryRecord[];
+    });
 
     return inventory.map(mapInventoryToPart);
   }
@@ -303,56 +286,6 @@ export class CatalogService {
               name: {
                 contains: normalizedDevice,
                 mode: 'insensitive',
-              },
-            },
-          },
-          {
-            variant: {
-              is: {
-                OR: [
-                  {
-                    modelNumber: {
-                      contains: normalizedDevice,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    marketingName: {
-                      contains: normalizedDevice,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    generation: {
-                      name: {
-                        contains: normalizedDevice,
-                        mode: 'insensitive',
-                      },
-                    },
-                  },
-                  {
-                    generation: {
-                      modelType: {
-                        name: {
-                          contains: normalizedDevice,
-                          mode: 'insensitive',
-                        },
-                      },
-                    },
-                  },
-                  {
-                    generation: {
-                      modelType: {
-                        brand: {
-                          name: {
-                            contains: normalizedDevice,
-                            mode: 'insensitive',
-                          },
-                        },
-                      },
-                    },
-                  },
-                ],
               },
             },
           },
@@ -412,19 +345,6 @@ export class CatalogService {
       },
       include: {
         category: true,
-        variant: {
-          include: {
-            generation: {
-              include: {
-                modelType: {
-                  include: {
-                    brand: true,
-                  },
-                },
-              },
-            },
-          },
-        },
         specifications: {
           orderBy: { label: 'asc' },
           select: {
@@ -454,7 +374,7 @@ export class CatalogService {
         { partName: 'asc' },
         { skuId: 'asc' },
       ],
-    }) as CatalogInventoryRecord[];
+    });
 
     return inventory.map(mapInventoryToPart);
   }

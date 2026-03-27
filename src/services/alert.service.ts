@@ -3,7 +3,6 @@ import { logger } from '../lib/logger.js';
 import type {
   AlertRule,
   AlertNotification,
-  MetricSnapshot,
   AlertStatus,
 } from '@prisma/client';
 
@@ -14,34 +13,28 @@ export interface EvaluateResult {
 
 export interface CreateRuleInput {
   name: string;
-  description?: string;
-  metric: string;
-  operator: string;
-  threshold: number;
-  windowMinutes?: number;
-  cooldownMinutes?: number;
+  condition: string; // JSON string describing the condition
+  actionType: string;
+  actionPayload: string; // JSON string
 }
 
 export type UpdateRuleInput = Partial<{
   name: string;
-  description: string;
-  enabled: boolean;
-  metric: string;
-  operator: string;
-  threshold: number;
-  windowMinutes: number;
-  cooldownMinutes: number;
+  condition: string;
+  actionType: string;
+  actionPayload: string;
+  isActive: boolean;
+  evaluationIntervalMs: number;
 }>;
 
 export class AlertService {
   /**
    * Evaluate all enabled AlertRules against recent MetricSnapshots.
-   * Uses a transaction per fired alert to atomically create the notification
-   * and update the rule's lastFiredAt timestamp.
+   * Uses a transaction per fired alert to atomically create the notification.
    */
   async evaluateAlerts(): Promise<EvaluateResult> {
     const rules = await prisma.alertRule.findMany({
-      where: { enabled: true },
+      where: { isActive: true },
     });
 
     let evaluated = 0;
@@ -49,66 +42,51 @@ export class AlertService {
     const now = new Date();
 
     for (const rule of rules) {
-      // Skip if within cooldown period
-      if (rule.lastFiredAt) {
-        const cooldownEnd = new Date(
-          rule.lastFiredAt.getTime() + rule.cooldownMinutes * 60 * 1000,
-        );
-        if (now < cooldownEnd) {
-          logger.debug({ ruleId: rule.id, name: rule.name }, 'Rule in cooldown, skipping');
-          continue;
-        }
+      // Parse condition from JSON
+      let condition: { metric: string; operator: string; threshold: number };
+      try {
+        condition = JSON.parse(rule.condition);
+      } catch {
+        logger.warn({ ruleId: rule.id, condition: rule.condition }, 'Failed to parse condition');
+        continue;
+      }
+
+      // Look for recent metric snapshots with matching name
+      const snapshots = await prisma.metricSnapshot.findMany({
+        where: { 
+          name: condition.metric,
+          createdAt: { gte: new Date(now.getTime() - rule.evaluationIntervalMs) }
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (snapshots.length === 0) {
+        logger.debug({ ruleId: rule.id }, 'No snapshots found, skipping');
+        continue;
       }
 
       evaluated++;
 
-      const windowStart = new Date(
-        now.getTime() - rule.windowMinutes * 60 * 1000,
-      );
-
-      const snapshots = await prisma.metricSnapshot.findMany({
-        where: { recordedAt: { gte: windowStart } },
-        orderBy: { latencyMs: 'asc' },
-      });
-
-      if (snapshots.length === 0) {
-        logger.debug({ ruleId: rule.id }, 'No snapshots in window, skipping');
-        continue;
-      }
-
-      const metricValue = this.calculateMetric(rule.metric, snapshots);
-      const triggered = this.compare(metricValue, rule.operator, rule.threshold);
+      // Get the latest value
+      const latestValue = snapshots[0].value;
+      const triggered = this.compare(latestValue, condition.operator, condition.threshold);
 
       if (triggered) {
         const message =
-          `Alert "${rule.name}": ${rule.metric} = ${metricValue} ` +
-          `${rule.operator} ${rule.threshold}`;
+          `Alert "${rule.name}": ${condition.metric} = ${latestValue} ` +
+          `${condition.operator} ${condition.threshold}`;
 
-        await prisma.$transaction([
-          prisma.alertNotification.create({
-            data: {
-              ruleId: rule.id,
-              status: 'ACTIVE',
-              message,
-              metadata: {
-                metric: rule.metric,
-                value: metricValue,
-                operator: rule.operator,
-                threshold: rule.threshold,
-                windowMinutes: rule.windowMinutes,
-              },
-              firedAt: now,
-            },
-          }),
-          prisma.alertRule.update({
-            where: { id: rule.id },
-            data: { lastFiredAt: now },
-          }),
-        ]);
+        await prisma.alertNotification.create({
+          data: {
+            ruleId: rule.id,
+            status: 'ACTIVE',
+            message,
+          },
+        });
 
         fired++;
         logger.info(
-          { ruleId: rule.id, name: rule.name, metricValue, threshold: rule.threshold },
+          { ruleId: rule.id, name: rule.name, metricValue: latestValue, threshold: condition.threshold },
           'Alert rule fired',
         );
       }
@@ -156,7 +134,7 @@ export class AlertService {
     return prisma.alertNotification.findMany({
       where: status ? { status } : undefined,
       include: { rule: true },
-      orderBy: { firedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -205,46 +183,6 @@ export class AlertService {
       default:
         logger.warn({ operator }, 'Unknown operator');
         return false;
-    }
-  }
-
-  private calculateMetric(
-    metric: string,
-    snapshots: MetricSnapshot[],
-  ): number {
-    switch (metric) {
-      case 'error_rate': {
-        const apiSnapshots = snapshots.filter((s) => s.serviceName === 'API');
-        if (apiSnapshots.length === 0) return 0;
-        const redCount = apiSnapshots.filter((s) => s.status === 'red').length;
-        return (redCount / apiSnapshots.length) * 100;
-      }
-
-      case 'latency_p95': {
-        const apiSnapshots = snapshots
-          .filter((s) => s.serviceName === 'API')
-          .sort((a, b) => a.latencyMs - b.latencyMs);
-        if (apiSnapshots.length === 0) return 0;
-        const p95Index = Math.min(
-          Math.ceil(apiSnapshots.length * 0.95) - 1,
-          apiSnapshots.length - 1,
-        );
-        return apiSnapshots[p95Index].latencyMs;
-      }
-
-      case 'service_status': {
-        return snapshots.filter((s) => s.status === 'red').length;
-      }
-
-      case 'avg_latency': {
-        if (snapshots.length === 0) return 0;
-        const total = snapshots.reduce((sum, s) => sum + s.latencyMs, 0);
-        return Math.round(total / snapshots.length);
-      }
-
-      default:
-        logger.warn({ metric }, 'Unknown metric type');
-        return 0;
     }
   }
 }

@@ -14,17 +14,11 @@ const skuParamsSchema = z.object({
 });
 
 const modelParamsSchema = z.object({
-  modelId: z.coerce
-    .number({ invalid_type_error: 'modelId must be a number' })
-    .int('modelId must be a whole number')
-    .positive('modelId must be a positive integer'),
+  modelId: z.string(),
 });
 
 const variantParamsSchema = z.object({
-  variantId: z.coerce
-    .number({ invalid_type_error: 'variantId must be a number' })
-    .int('variantId must be a whole number')
-    .positive('variantId must be a positive integer'),
+  variantId: z.string(),
 });
 
 const bulkCheckSchema = z.object({
