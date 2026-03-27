@@ -142,4 +142,3 @@ Deployed to **Vercel** via GitHub integration:
 - Structured logging with Pino (JSON in production, pretty in dev)
 - Redis caching for frequently accessed data (catalog, inventory)
 - Prisma migrations managed in `prisma/migrations/`
-# ctir-backendv1-official

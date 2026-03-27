@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum QualityGrade {
+  OEM
+  Premium
+  Aftermarket
+  U
+  NA
+}
+
+enum Role {
+  BUYER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum QuoteRequestStatus {
+  RECEIVED
+  REVIEWING
+  RESPONDED
+  CLOSED
+}
+
+// --- DEVICE HIERARCHY (4 LEVELS) ---
+model Brand {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  modelTypes ModelType[]
+}
+
+model ModelType {
+  id          Int          @id @default(autoincrement())
+  brandId     Int
+  name        String
+  brand       Brand        @relation(fields: [brandId], references: [id])
+  generations Generation[]
+
+  @@unique([brandId, name])
+  @@index([brandId])
+}
+
+model Generation {
+  id          Int       @id @default(autoincrement())
+  modelTypeId Int
+  name        String
+  releaseYear Int?
+  modelType   ModelType @relation(fields: [modelTypeId], references: [id])
+  variants    Variant[]
+
+  @@unique([modelTypeId, name])
+  @@index([modelTypeId])
+}
+
+model Variant {
+  id              Int                @id @default(autoincrement())
+  generationId    Int
+  modelNumber     String             @unique
+  marketingName   String
+  colorway        String?
+  storage         String?
+  generation      Generation         @relation(fields: [generationId], references: [id])
+  inventory       Inventory[]
+  compatibilities CompatibilityMap[]
+
+  @@index([generationId])
+  @@index([marketingName])
+}
+
+// --- CATALOG ---
+model Category {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  inventory Inventory[]
+}
+
+model Inventory {
+  // Smart SKU buckets are documented, but not yet enforced in the schema:
+  // [Bucket]-[Subcategory]-[Grade]-[Device]
+  // Example: 3-C-O-IP13 = Functional Module / Battery / OEM / iPhone 13
+  skuId          String       @id
+  variantId      Int?
+  categoryId     Int
+  partName       String
+  qualityGrade   QualityGrade @default(Aftermarket)
+  wholesalePrice Int          @default(0)
+  stockLevel     Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  variant         Variant?           @relation(fields: [variantId], references: [id])
+  category        Category           @relation(fields: [categoryId], references: [id])
+  specifications  Specification[]
+  compatibilities CompatibilityMap[]
+  cartItems       Cart[]
+  orderLines      OrderLine[]
+
+  @@index([variantId])
+  @@index([categoryId])
+  @@index([partName])
+}
+
+model Specification {
+  id           Int       @id @default(autoincrement())
+  skuId        String
+  label        String
+  value        String
+  displayOrder Int       @default(0)
+  inventory    Inventory @relation(fields: [skuId], references: [skuId], onDelete: Cascade)
+
+  @@unique([skuId, label])
+  @@index([skuId])
+}
+
+model CompatibilityMap {
+  skuId     String
+  variantId Int
+
+  inventory Inventory @relation(fields: [skuId], references: [skuId], onDelete: Cascade)
+  variant   Variant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@id([skuId, variantId])
+  @@index([variantId])
+}
+
+// --- AUTH ---
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  company   String?
+  phone     String?
+  role      Role     @default(BUYER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  carts     Cart[]
+  orders    Order[]
+}
+
+// --- COMMERCE ---
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String
+  skuId     String
+  quantity  Int      @default(5)
+  addedAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventory Inventory @relation(fields: [skuId], references: [skuId])
+
+  @@unique([userId, skuId])
+  @@index([userId])
+  @@index([skuId])
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  userId                String
+  status                OrderStatus @default(PENDING)
+  totalCents            Int
+  stripePaymentIntentId String?     @unique
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lines OrderLine[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderLine {
+  id                           String       @id @default(cuid())
+  orderId                      String
+  skuId                        String
+  quantity                     Int
+  unitPriceAtPurchase          Int
+  partNameSnapshot             String
+  qualityGradeSnapshot         QualityGrade
+  variantMarketingNameSnapshot String?
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventory Inventory @relation(fields: [skuId], references: [skuId])
+
+  @@index([orderId])
+  @@index([skuId])
+}
+
+model QuoteRequest {
+  id          String             @id @default(cuid())
+  userId      String?
+  email       String
+  company     String?
+  contactName String?
+  phone       String?
+  notes       String
+  status      QuoteRequestStatus @default(RECEIVED)
+  submittedAt DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  items QuoteRequestItem[]
+
+  @@index([userId])
+  @@index([submittedAt])
+}
+
+model QuoteRequestItem {
+  id             String  @id @default(cuid())
+  quoteRequestId String
+  skuId          String?
+  quantity       Int?
+  note           String?
+
+  quoteRequest QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+
+  @@index([quoteRequestId])
+  @@index([skuId])
+}
+
+// --- MONITORING & OBSERVABILITY ---
+
+enum EventSeverity {
+  INFO
+  WARN
+  ERROR
+  CRITICAL
+}
+
+enum EventCategory {
+  SYSTEM
+  COMMERCE
+  AUTH
+  PERFORMANCE
+  INVENTORY
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  SILENCED
+}
+
+model SystemEvent {
+  id        String        @id @default(cuid())
+  category  EventCategory
+  severity  EventSeverity
+  source    String
+  message   String
+  metadata  Json?
+  createdAt DateTime      @default(now())
+
+  @@index([category])
+  @@index([severity])
+  @@index([createdAt])
+  @@index([source])
+}
+
+model MetricSnapshot {
+  id          String   @id @default(cuid())
+  serviceName String
+  status      String
+  latencyMs   Int
+  metadata    Json?
+  recordedAt  DateTime @default(now())
+
+  @@index([serviceName])
+  @@index([recordedAt])
+  @@index([serviceName, recordedAt])
+}
+
+model AlertRule {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  enabled         Boolean   @default(true)
+  metric          String
+  operator        String
+  threshold       Float
+  windowMinutes   Int       @default(5)
+  cooldownMinutes Int       @default(30)
+  lastFiredAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  notifications AlertNotification[]
+}
+
+model AlertNotification {
+  id             String      @id @default(cuid())
+  ruleId         String
+  status         AlertStatus @default(ACTIVE)
+  message        String
+  metadata       Json?
+  firedAt        DateTime    @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+
+  rule AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([status])
+  @@index([firedAt])
+}
