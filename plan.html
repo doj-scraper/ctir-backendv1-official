@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three-Phase Migration Plan: Clerk to Supabase Auth + Stripe Integration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #24292e;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #ffffff;
+        }
+        h1, h2, h3 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        h1 {
+            font-size: 2em;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        h2 {
+            font-size: 1.5em;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        h3 {
+            font-size: 1.25em;
+        }
+        p {
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        code {
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 85%;
+            background-color: rgba(27, 31, 35, 0.05);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            padding: 16px;
+            overflow: auto;
+            line-height: 1.45;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 100%;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 16px;
+            display: block;
+            overflow-x: auto;
+        }
+        th, td {
+            padding: 6px 13px;
+            border: 1px solid #dfe2e5;
+        }
+        th {
+            background-color: #f6f8fa;
+            font-weight: 600;
+            text-align: left;
+        }
+        tr:nth-child(2n) {
+            background-color: #f8f9fa;
+        }
+        hr {
+            height: 0.25em;
+            padding: 0;
+            margin: 24px 0;
+            background-color: #e1e4e8;
+            border: 0;
+        }
+        ul, ol {
+            padding-left: 2em;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        li {
+            margin-bottom: 0.25em;
+        }
+        strong {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Three-Phase Migration Plan: Clerk &rarr; Supabase Auth + Stripe Integration</h1>
+
+    <h2>Phase 1 &mdash; Migrate Clerk &rarr; Supabase Auth</h2>
+
+    <h3>1.1 All Clerk References (Frontend Repo Only)</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Line(s)</th>
+                <th>What It Does</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>middleware.ts</code></td>
+                <td>3-26</td>
+                <td>Lazy-imports <code>clerkMiddleware</code> + <code>createRouteMatcher</code> from <code>@clerk/nextjs/server</code>. Guards <code>/dashboard(.*)</code> and <code>/admin(.*)</code> routes. Checks both <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and <code>CLERK_SECRET_KEY</code> before activating.</td>
+            </tr>
+            <tr>
+                <td><code>components/auth-provider.tsx</code></td>
+                <td>1, 4, 6-10</td>
+                <td>Imports <code>ClerkProvider</code> from <code>@clerk/nextjs</code>. Wraps app children with <code>&lt;ClerkProvider publishableKey={...}&gt;</code>. Falls through to raw <code>children</code> if no key.</td>
+            </tr>
+            <tr>
+                <td><code>lib/clerk-safe.ts</code></td>
+                <td>3, 5, 30-51</td>
+                <td>Imports <code>useAuth</code> as <code>useClerkAuth</code>, <code>useUser</code> from <code>@clerk/nextjs</code>. Exports <code>useSafeClerkAuth()</code> and <code>useSafeClerkUser()</code> &mdash; both fail-safe wrappers that return noop objects if Clerk isn't configured.</td>
+            </tr>
+            <tr>
+                <td><code>hooks/useAuth.ts</code></td>
+                <td>15-70</td>
+                <td>Imports from <code>@/lib/clerk-safe</code>. Calls <code>useSafeClerkUser()</code> to get <code>clerkUser</code> (for email, name, id) and <code>useSafeClerkAuth()</code> to get <code>getToken()</code>. The JWT from <code>getToken()</code> is passed as a Bearer token to the backend.</td>
+            </tr>
+            <tr>
+                <td><code>store/authStore.ts</code></td>
+                <td>20</td>
+                <td>The <code>User</code> interface has a <code>clerkId: string</code> field.</td>
+            </tr>
+            <tr>
+                <td><code>components/dashboard-section.tsx</code></td>
+                <td>5, 62</td>
+                <td>Imports and calls <code>useSafeClerkAuth()</code> to get <code>getToken()</code> which is passed to <code>fetchOrders()</code>.</td>
+            </tr>
+            <tr>
+                <td><code>components/checkout-section.tsx</code></td>
+                <td>6, 42</td>
+                <td>Imports and calls <code>useSafeClerkAuth()</code> to get <code>getToken()</code> for authenticated checkout via <code>createCheckout()</code>.</td>
+            </tr>
+            <tr>
+                <td><code>app/admin/health/page.tsx</code></td>
+                <td>4, 107, 116-117</td>
+                <td>Imports and calls <code>useSafeClerkAuth()</code> to pass token to <code>fetchSystemHealth()</code>.</td>
+            </tr>
+            <tr>
+                <td><code>lib/validation.ts</code></td>
+                <td>10, 56, 73</td>
+                <td>Comments stating "authentication handled by Clerk" &mdash; note only, no code dependency.</td>
+            </tr>
+            <tr>
+                <td><code>.env.example</code></td>
+                <td>2-3</td>
+                <td>Documents <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and <code>CLERK_SECRET_KEY</code>.</td>
+            </tr>
+            <tr>
+                <td><code>package.json</code></td>
+                <td>line 16</td>
+                <td><code>"@clerk/nextjs": "^7.0.7"</code> as a runtime dependency.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>1.2 Auth UI Components / Login Injection Points</h3>
+
+    <p><strong>There are no dedicated login/signup page files under <code>app/</code>. Authentication pages are expected at <code>/sign-in</code> and <code>/sign-up</code> routes (referenced by links in components), but no <code>app/sign-in/</code> or <code>app/sign-up/</code> directories exist yet. These must be created.</strong></p>
+
+    <p><strong>Files that need Supabase Auth UI logic injected:</strong></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Where Link Appears</th>
+                <th>File</th>
+                <th>Line(s)</th>
+                <th>Target Route</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>"Sign in" button (not logged in)</td>
+                <td><code>components/dashboard-section.tsx</code></td>
+                <td>155, 234</td>
+                <td><code>/sign-in</code></td>
+            </tr>
+            <tr>
+                <td>"Save this order &mdash; Create Account" CTA</td>
+                <td><code>app/checkout/success/page.tsx</code></td>
+                <td>80</td>
+                <td><code>/sign-up</code></td>
+            </tr>
+            <tr>
+                <td>Navigation "Sign in" text (conditionally)</td>
+                <td><code>components/navigation.tsx</code></td>
+                <td>109, 191</td>
+                <td><code>/dashboard</code> (redirects to sign-in if not authed)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Phase 2 &mdash; Stripe Managed by Supabase</h2>
+
+    <h3>2.1 Current Stripe Presence in the Frontend</h3>
+
+    <p><strong>There is no Stripe SDK code in the frontend repo. The only Stripe reference is:</strong></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Line</th>
+                <th>Content</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>lib/api.ts</code></td>
+                <td>324</td>
+                <td><code>stripeClientSecret?: string; // Present if Stripe PaymentIntent created &mdash; part of the CheckoutResult interface</code></td>
+            </tr>
+            <tr>
+                <td><code>DOCS/BACKEND_ROADMAP.md</code></td>
+                <td>Stage D</td>
+                <td>Documents <code>POST /api/checkout/intent</code> returning a <code>clientSecret</code>, and <code>POST /api/checkout/webhook</code></td>
+            </tr>
+            <tr>
+                <td><code>DOCS/project_docs/BACKENDREPORT.md</code></td>
+                <td>164</td>
+                <td>Backend env schema defines <code>STRIPE_SECRET_KEY: z.string().optional()</code></td>
+            </tr>
+            <tr>
+                <td><code>DOCS/project_docs/backend-status-report0325.md</code></td>
+                <td>83, 180</td>
+                <td>Backend implements <code>POST /api/checkout/webhook</code> with Stripe signature validation; frontend needs <code>STRIPE_SECRET_KEY</code> env var</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p><strong>The intended integration</strong> (per <code>CheckoutResult.stripeClientSecret</code> in <code>lib/api.ts:324</code>) is:</p>
+
+    <ol>
+        <li>Frontend calls <code>POST /api/checkout</code> (via <code>createCheckout()</code> in <code>lib/api.ts:327-345</code>)</li>
+        <li>Backend creates a Stripe <code>PaymentIntent</code>, returns <code>clientSecret</code> in response</li>
+        <li>Frontend uses <code>@stripe/stripe-js</code> / Stripe Elements to complete payment in the browser</li>
+    </ol>
+
+    <h3>2.2 Where Supabase User IDs Need to Link to Stripe Customers</h3>
+
+    <p><strong>After Phase 1 migrates auth, the backend's <code>POST /api/webhooks/clerk</code> Clerk webhook (<code>backend-status-report0325.md:96</code>) must be replaced with a Supabase Auth webhook that creates/updates a User row in Postgres with the Supabase <code>user_id</code>. The frontend's <code>lib/api.ts:401-411</code> (<code>userProfile.clerkId</code>) will need to become <code>supabaseId</code>.</strong></p>
+
+    <p><strong>Frontend touchpoints for Stripe-Supabase linkage:</strong></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Line(s)</th>
+                <th>Change Needed</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>lib/api.ts</code></td>
+                <td>327-345 (<code>createCheckout</code>)</td>
+                <td>No change needed &mdash; this calls the backend which handles Stripe. If <code>stripeClientSecret</code> comes back, the frontend must mount Stripe Elements.</td>
+            </tr>
+            <tr>
+                <td><code>lib/api.ts</code></td>
+                <td>403</td>
+                <td><code>clerkId: string | null</code> &rarr; <code>supabaseId: string | null</code></td>
+            </tr>
+            <tr>
+                <td><code>components/checkout-section.tsx</code></td>
+                <td>113-140</td>
+                <td>If <code>result.stripeClientSecret</code> is returned, integrate <code>@stripe/react-stripe-js</code> (<code>&lt;Elements&gt;</code> + <code>&lt;PaymentElement&gt;</code>) here. Currently the checkout simply creates an order without triggering Stripe payment on the frontend.</td>
+            </tr>
+            <tr>
+                <td>New file: <code>lib/stripe/client.ts</code></td>
+                <td>&mdash;</td>
+                <td>Initialize <code>loadStripe(NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)</code> for Stripe Elements</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p><strong>Key insight:</strong> The frontend <code>checkout-section.tsx</code> currently submits via <code>createCheckout()</code> and redirects to <code>/checkout/success</code> without any Stripe client-side payment confirmation step. The <code>stripeClientSecret</code> field exists in <code>CheckoutResult</code> but is never consumed. Full Stripe integration requires adding a <code>&lt;Elements&gt;</code> wrapper and a <code>&lt;PaymentElement&gt;</code> step before the success redirect.</p>
+
+    <hr>
+
+    <h2>Phase 3 &mdash; Supabase PostgreSQL (Prisma/Seed)</h2>
+
+    <h3>3.1 Prisma Schema and Seed Location</h3>
+
+    <p><strong>These files do not exist in this frontend repo.</strong> Per <code>DOCS/ARCHITECTURE.md:36</code> and <code>DOCS/NEXT_STEPS.md:48</code>:</p>
+
+    <ul>
+        <li><code>prisma/schema.prisma</code> &rarr; lives in the backend repo (<code>CellTech/Test/schema.prisma</code> per the original project layout, now at <code>celltech-backend/prisma/schema.prisma</code> per <code>backend-status-report0325.md:107</code>)</li>
+        <li><code>prisma/seed.ts</code> &rarr; <code>celltech-backend/prisma/seed.ts</code></li>
+    </ul>
+
+    <p><strong>The frontend has no direct database connection.</strong> It communicates only via <code>lib/api.ts</code> &rarr; Express backend &rarr; Prisma &rarr; Neon PostgreSQL.</p>
+
+    <h3>3.2 Database Connection Points in the Frontend</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Nature of DB Access</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>lib/api.ts</code> (all functions)</td>
+                <td><strong>Indirect only</strong> &mdash; all calls go through <code>NEXT_PUBLIC_API_URL</code> (the Express backend). No <code>DATABASE_URL</code> or Prisma client is present in this repo.</td>
+            </tr>
+            <tr>
+                <td><code>middleware.ts</code></td>
+                <td>After Supabase migration, will use Supabase SSR which talks to Supabase (Postgres) for session refresh &mdash; but that's Auth, not direct DB.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p><strong>The only scenario where Postgres touches the frontend directly is if you add Next.js API Route Handlers (e.g., <code>app/api/...</code>) that use Prisma or Supabase's <code>supabase-js</code> to query Postgres. Currently none exist.</strong></p>
+
+    <hr>
+
+    <h2>Middleware (<code>middleware.ts</code>) &mdash; Analysis and Upstash Integration</h2>
+
+    <h3>Current <code>middleware.ts</code> logic (<code>middleware.ts:1-33</code>):</h3>
+
+    <ol>
+        <li>Checks if <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and <code>CLERK_SECRET_KEY</code> are set (line 3-5)</li>
+        <li>If not set, passes through all requests with <code>NextResponse.next()</code> (line 8-10)</li>
+        <li>Dynamically imports <code>clerkMiddleware</code> and <code>createRouteMatcher</code> (line 12)</li>
+        <li>Protects <code>/dashboard(.*)</code> and <code>/admin(.*)</code> routes with <code>auth.protect()</code> (lines 14-23)</li>
+    </ol>
+
+    <h3>After Phase 1 (Supabase), <code>middleware.ts</code> must:</h3>
+
+    <ol>
+        <li>Create a Supabase SSR client using <code>createMiddlewareClient()</code></li>
+        <li>Call <code>supabase.auth.getSession()</code> to refresh the session cookie</li>
+        <li>Redirect unauthenticated users away from <code>/dashboard</code> and <code>/admin</code></li>
+        <li>Forward the <code>supabase</code> response cookies</li>
+    </ol>
+
+    <h3>Upstash Redis Rate Limiting &mdash; where it should be integrated:</h3>
+
+    <p>Upstash (<code>REDIS_URL</code> / <code>@upstash/ratelimit</code>) belongs in the <strong>backend middleware</strong> (<code>celltech-backend/src/middleware/rateLimit.ts</code>), per:</p>
+
+    <ul>
+        <li><code>DOCS/BACKEND_ROADMAP.md</code> Stage A-6: "Redis singleton &mdash; Upstash/loredis, used for rate-limit store + session cache"</li>
+        <li><code>DOCS/BACKEND_ROADMAP.md</code> Stage C-11: "Rate limiting &mdash; Redis-backed &mdash; Auth endpoints: 10 req/15 min per IP. Cart: 60 req/min per user."</li>
+        <li><code>squad/skills/optional-cache-auth/SKILL.md</code>: describes the pattern of optional Redis blacklist checking in <code>celltech-backend/src/middleware/auth.ts</code></li>
+    </ul>
+
+    <p>However, if you want <strong>edge-level rate limiting in the Next.js frontend middleware</strong> (e.g., to protect <code>/api</code> routes or the <code>/dashboard</code> route from abuse), you can add <code>@upstash/ratelimit</code> + <code>@upstash/redis</code> to <code>middleware.ts</code>. The required env vars would then also be needed on the frontend:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Variable</th>
+                <th>Purpose</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>UPSTASH_REDIS_REST_URL</code></td>
+                <td>Upstash REST endpoint for <code>@upstash/redis</code></td>
+            </tr>
+            <tr>
+                <td><code>UPSTASH_REDIS_REST_TOKEN</code></td>
+                <td>Auth token for Upstash REST</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p><strong>Suggested Upstash integration point in <code>middleware.ts</code> &mdash; after session refresh, before route protection:</strong></p>
+
+<pre><code>// In middleware.ts &mdash; after Supabase session refresh
+const ratelimit = new Ratelimit({
+  redis: limiter,
+  limiter: Ratelimit.slidingWindow(10, "15m")
+});
+const { success } = await ratelimit.limit(req.ip ?? 'unknown');
+if (!success) return new NextResponse('Too Many Requests', { status: 429 });
+</code></pre>
+
+    <hr>
+
+    <h2>UI.md Design Alignment</h2>
+
+    <p>Per <code>DOCS/UI.md</code>:</p>
+
+    <ul>
+        <li><strong>All auth UI</strong> (<code>/sign-in</code>, <code>/sign-up</code>) must use the <strong>dark theme</strong> with <code>ct-bg</code> (<code>#070A12</code>) backgrounds, <code>ct-accent</code> (<code>#00E5C0</code>) for CTAs, and <code>ct-text</code> / <code>ct-text-secondary</code> for text</li>
+        <li><strong>Form inputs</strong> must use the <code>.input-dark</code> utility class (defined in <code>app/globals.css</code>)</li>
+        <li><strong>Buttons</strong>: <code>.btn-primary</code> (accent fill) and <code>.btn-secondary</code> (outlined)</li>
+        <li><strong>No light-theme components</strong>; no hardcoded hex values in JSX &mdash; use <code>ct-*</code> Tailwind tokens</li>
+        <li><strong>Font</strong>: <code>font-display</code> (Sora) for headings, <code>font-body</code> (Inter) for inputs/labels, <code>font-mono</code> (IBM Plex Mono) for SKUs/session IDs</li>
+        <li><strong>Cards</strong>: <code>dashboard-card</code> CSS class pattern from <code>globals.css</code></li>
+        <li><strong>Animations</strong>: Framer Motion <code>AnimatePresence</code> / <code>motion.div</code> as used throughout (e.g., <code>components/hero-section.tsx</code>, <code>components/checkout-section.tsx</code>)</li>
+    </ul>
+
+    <p><strong>The existing <code>components/forms/FormInput.tsx</code>, <code>FormSelect.tsx</code>, <code>PasswordStrength.tsx</code>, and <code>AddressForm.tsx</code> are already styled correctly and can be reused directly in the new sign-in/sign-up pages.</strong></p>
+
+    <hr>
+
+    <h2>Full File Impact Table</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Phase</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>middleware.ts</code></td>
+                <td>1 + Upstash</td>
+                <td>Replace Clerk middleware with Supabase SSR + optional Upstash rate limit</td>
+            </tr>
+            <tr>
+                <td><code>components/auth-provider.tsx</code></td>
+                <td>1</td>
+                <td>Replace <code>ClerkProvider</code> with Supabase <code>SessionContextProvider</code></td>
+            </tr>
+            <tr>
+                <td><code>lib/clerk-safe.ts</code></td>
+                <td>1</td>
+                <td>Delete; replace with <code>lib/supabase-auth.ts</code></td>
+            </tr>
+            <tr>
+                <td><code>hooks/useAuth.ts</code></td>
+                <td>1</td>
+                <td>Replace Clerk hooks with Supabase <code>session.access_token</code></td>
+            </tr>
+            <tr>
+                <td><code>store/authStore.ts</code></td>
+                <td>1</td>
+                <td>Rename <code>clerkId</code> &rarr; <code>supabaseId</code> in <code>User</code> interface</td>
+            </tr>
+            <tr>
+                <td><code>lib/api.ts</code> (line 403)</td>
+                <td>1</td>
+                <td><code>clerkId: string | null</code> &rarr; <code>supabaseId: string | null</code></td>
+            </tr>
+            <tr>
+                <td><code>app/sign-in/page.tsx</code></td>
+                <td>1</td>
+                <td><strong>Create</strong> &mdash; Supabase Auth UI or custom form</td>
+            </tr>
+            <tr>
+                <td><code>app/sign-up/page.tsx</code></td>
+                <td>1</td>
+                <td><strong>Create</strong> &mdash; Supabase Auth UI or custom form</td>
+            </tr>
+            <tr>
+                <td><code>lib/supabase/client.ts</code></td>
+                <td>1</td>
+                <td><strong>Create</strong> &mdash; browser Supabase client</td>
+            </tr>
+            <tr>
+                <td><code>lib/supabase/server.ts</code></td>
+                <td>1</td>
+                <td><strong>Create</strong> &mdash; server Supabase client</td>
+            </tr>
+            <tr>
+                <td><code>components/dashboard-section.tsx</code></td>
+                <td>1</td>
+                <td>Replace <code>useSafeClerkAuth</code> with Supabase session hook</td>
+            </tr>
+            <tr>
+                <td><code>components/checkout-section.tsx</code></td>
+                <td>1+2</td>
+                <td>Replace <code>useSafeClerkAuth</code>; add Stripe Elements if <code>stripeClientSecret</code> present</td>
+            </tr>
+            <tr>
+                <td><code>app/admin/health/page.tsx</code></td>
+                <td>1</td>
+                <td>Replace <code>useSafeClerkAuth</code> with Supabase session hook</td>
+            </tr>
+            <tr>
+                <td><code>lib/stripe/client.ts</code></td>
+                <td>2</td>
+                <td><strong>Create</strong> &mdash; <code>loadStripe(NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)</code></td>
+            </tr>
+            <tr>
+                <td><code>lib/api.ts</code> (<code>createCheckout</code>)</td>
+                <td>2</td>
+                <td>Consume <code>stripeClientSecret</code> from response; mount Stripe Elements</td>
+            </tr>
+            <tr>
+                <td><code>.env.example</code></td>
+                <td>1+2</td>
+                <td>Replace Clerk keys with Supabase + Stripe publishable key</td>
+            </tr>
+            <tr>
+                <td><code>package.json</code></td>
+                <td>1+2</td>
+                <td>Remove <code>@clerk/nextjs</code>; add <code>@supabase/ssr</code>, <code>@supabase/supabase-js</code>, <code>@stripe/stripe-js</code>, <code>@stripe/react-stripe-js</code>; optionally <code>@upstash/redis</code>, <code>@upstash/ratelimit</code></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h2>General Requirements</h2>
+
+    <h3>Environment Variables &mdash; Full Inventory</h3>
+
+    <p><strong>Currently in Frontend (<code>.env.example</code>):</strong></p>
+
+<pre><code>NEXT_PUBLIC_API_URL=https://ctir-backendv1-official.vercel.app
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+</code></pre>
+
+    <hr>
+
+    <h2>After All 3 Phases &mdash; Complete Frontend <code>.env</code> Required</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Variable</th>
+                <th>Source</th>
+                <th>Used In</th>
+                <th>Required?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>NEXT_PUBLIC_API_URL</code></td>
+                <td>Backend Vercel URL</td>
+                <td><code>lib/api.ts:16</code></td>
+                <td>✅ Required</td>
+            </tr>
+            <tr>
+                <td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
+                <td>Supabase project URL</td>
+                <td><code>lib/supabase/client.ts</code>, <code>lib/supabase/server.ts</code>, <code>middleware.ts</code></td>
+                <td>✅ Required (replaces Clerk)</td>
+            </tr>
+            <tr>
+                <td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
+                <td>Supabase anon key</td>
+                <td>Same as above</td>
+                <td>✅ Required (replaces Clerk)</td>
+            </tr>
+            <tr>
+                <td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+                <td>Supabase service role</td>
+                <td>Server-only: <code>lib/supabase/server.ts</code> for admin ops</td>
+                <td>⚠️ Only if server-side admin queries needed</td>
+            </tr>
+            <tr>
+                <td><code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code></td>
+                <td>Stripe dashboard</td>
+                <td><code>lib/stripe/client.ts</code> for Stripe Elements</td>
+                <td>✅ Required for payment UI (Phase 2)</td>
+            </tr>
+            <tr>
+                <td><del><code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code></del></td>
+                <td>Clerk</td>
+                <td>Removed in Phase 1</td>
+                <td>❌ Remove</td>
+            </tr>
+            <tr>
+                <td><del><code>CLERK_SECRET_KEY</code></del></td>
+                <td>Clerk</td>
+                <td>Removed in Phase 1</td>
+                <td>❌ Remove</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Backend <code>.env</code> (for reference &mdash; from <code>DOCS/project_docs/BACKENDREPORT.md: 851-856</code>)</h2>
+
+<pre><code>DATABASE_URL            # Neon PostgreSQL connection string
+DIRECT_URL              # Neon direct connection (for migrations)
+JWT_SECRET              # 32+ chars (can be removed if pure Clerk/Supabase JWT)
+REDIS_URL               # Upstash Redis URL
+STRIPE_SECRET_KEY       # Stripe secret key
+STRIPE_WEBHOOK_SECRET   # For webhook signature verification
+CLERK_SECRET_KEY        # Backend Clerk verification (&rarr; SUPABASE_JWT_SECRET in Phase 1)
+</code></pre>
+
+</body>
+</html>
