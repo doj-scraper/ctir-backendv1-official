@@ -4,6 +4,58 @@ This document provides context and rules for AI coding agents (Rovo Dev, GitHub 
 
 ---
 
+## 🧠 Memory — Current State (Updated 2026-04-03)
+
+### Where We Are
+- **Dev server is running** on port 3001 (`npm run dev`)
+- **Database connected** to Neon PostgreSQL (pooled connection via serverless adapter)
+- **Database tables do NOT exist yet** — `prisma db push` + `prisma db seed` have NOT been run
+- **Clerk middleware is conditional** — skips when `CLERK_SECRET_KEY` is not set (see `src/middleware/auth.ts`)
+- **dotenv added** — `import 'dotenv/config'` was added to `src/config/env.ts` to load `.env` file
+- **Redis, Clerk, Stripe** are not configured locally yet (commented out in `.env`)
+- All 53 route endpoints are wired in code (routes → services → Prisma), but nothing works end-to-end until tables exist
+
+### Changes Made (This Session)
+1. Created `.env` from Vercel CTIR_* variables (mapped to standard names)
+2. Added `import 'dotenv/config'` to `src/config/env.ts`
+3. Made Clerk `authMiddleware` conditional in `src/middleware/auth.ts` — no-op when `CLERK_SECRET_KEY` is absent
+
+### Environment Variable Mapping (Vercel → Backend)
+| Vercel (CTIR_*) | Backend expects |
+|---|---|
+| `CTIR_POSTGRES_PRISMA_URL` | `DATABASE_URL` |
+| `CTIR_POSTGRES_URL_NON_POOLING` | `DIRECT_URL` |
+| (not on Vercel yet) | `CLERK_SECRET_KEY` |
+| (not on Vercel yet) | `STRIPE_SECRET_KEY` |
+| (not on Vercel yet) | `REDIS_URL` |
+
+### Multi-Agent Setup
+- **This backend** is managed by **Claude Opus** — owns all backend code, API routes, services, database schema
+- **The frontend** is managed by **GPT-5.4** — owns all frontend code, UI, API client calls
+- This backend repo may be cloned into the frontend Codespace for local development (both on localhost)
+- If cloned into frontend workspace: the `.git` folder will be removed so git doesn't track it there
+- **Coordination rule:** Backend agent defines the API contract. Frontend agent consumes it. Neither modifies the other's code.
+
+### What To Do Next (In Order)
+1. **Push schema to database:** `npx prisma db push` — creates all 13+ tables
+2. **Seed the database:** `npx prisma db seed` — populates device hierarchy, categories, sample inventory
+3. **Verify catalog endpoints work:** `GET /api/health`, `GET /api/brands`, `GET /api/hierarchy`
+4. **Add Clerk keys** to `.env` and test authenticated routes (cart, checkout, orders, users)
+5. **Add Stripe keys** to `.env` and test checkout flow
+6. **Add Redis URL** to `.env` for rate limiting and caching
+7. **Run test suite:** `npm test` — all 16 test files should pass
+8. **Frontend integration testing** — frontend dev hits live endpoints
+
+### What Should Come After
+- End-to-end checkout flow testing (guest + authenticated)
+- Admin role enforcement on monitoring endpoints
+- Alert notification delivery (email/Slack — currently rules fire but nothing sends)
+- Order fulfillment state transitions (SHIPPED/DELIVERED — currently no backend trigger)
+- Inventory reservation/hold system during checkout window
+- Production deployment verification on Vercel
+
+---
+
 ## Repository Purpose
 
 This is the **CellTech wholesale parts distribution backend**. It is a production Express.js REST API deployed on Vercel, backed by Neon PostgreSQL and Upstash Redis. Authentication is handled entirely by **Clerk** — there are no passwords, sessions, or NextAuth artifacts in this codebase.

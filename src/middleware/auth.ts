@@ -21,8 +21,11 @@ declare global {
 /**
  * Standard Clerk middleware that processes the session token.
  * Does NOT block unauthenticated requests (use requireAuth for that).
+ * Skips entirely when Clerk is not configured (no CLERK_SECRET_KEY).
  */
-export const authMiddleware = clerkMiddleware();
+export const authMiddleware = process.env.CLERK_SECRET_KEY
+  ? clerkMiddleware()
+  : (_req: Request, _res: Response, next: NextFunction) => next();
 
 /**
  * Enforces authentication and hydrates req.user from our database.
